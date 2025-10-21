@@ -1,0 +1,4 @@
+socket
+threading
+pandas
+cryptography

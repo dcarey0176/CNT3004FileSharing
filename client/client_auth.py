@@ -1,0 +1,1 @@
+# Handles client-side authentication
