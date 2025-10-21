@@ -4,7 +4,7 @@ This project implements a multithreaded, socket-based file sharing system using 
 
 ## 📁 Project File Structure
 
-<code>
+```
 CNT3004_FileSharing/
 │
 ├── README.md # Overview, setup instructions, and network guide
@@ -49,7 +49,7 @@ CNT3004_FileSharing/
 ├── test_server.py
 ├── test_client.py
 └── test_analysis.py
-</code>
+```
 
 ## How to Run
 
