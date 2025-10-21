@@ -4,7 +4,7 @@ This project implements a multithreaded, socket-based file sharing system using 
 
 ## 📁 Project File Structure
 
-```
+```bash
 CNT3004_FileSharing/
 │
 ├── README.md # Overview, setup instructions, and network guide
