@@ -10,21 +10,18 @@ CNT3004_FileSharing/
 │ ├── server.py # Main server file 
 │ ├── init.py
 │ ├── utils/
-│ │ ├── init.py
+│ │ └── init.py
 │ │ 
 │ └── storage/
 │ └── (server-side files saved here)
 │
 ├── client/
-│ ├── client1.py # Client 1 (different function set)
-│ ├── client2.py # Client 2 (different function set)
+│ ├── client.py
 │ ├── init.py
 │ └── shared/
-│ └── commands.py # (optional) shared functions between clients
 │
 ├── analysis/
-│ ├── performance_test.py # Measure file transfer or response times
-│ └── network_load.txt # Output logs from testing
+│ └── performance_test.py # Measure file transfer or response times
 │
 ├── docs/
 │ ├── diagrams/
