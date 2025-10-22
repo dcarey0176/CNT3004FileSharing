@@ -5,6 +5,7 @@
 import os
 import socket
 import threading
+from auth import authenticate
 
 IP = "localhost"
 PORT = 4450
@@ -18,7 +19,19 @@ def handle_client (conn,addr):
 
 
     print(f"[NEW CONNECTION] {addr} connected.")
-    conn.send("OK@Welcome to the server".encode(FORMAT))
+    conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
+    auth_data = conn.rev(SIZE).decode(FORMAT)
+    cmd, username, password = auth_data.split("@")
+
+    if cmd == "LOGIN":
+        if authenticate(username, password):
+            conn.send("OK@AUTH_SUCCESS".encode(FORMAT))
+            print(f"[AUTH_SUCCESS] {username} authenticated from {ADDR}")
+        else:
+            conn.send("ERR@AUTH_FAILED".encode(FORMAT))
+            print(f"[AUTH_FAIL] {ADDR} failed authentication.")
+            conn.close()
+            return
 
     while True:
         data =  conn.recv(SIZE).decode(FORMAT)
