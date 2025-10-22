@@ -6,48 +6,39 @@ This project implements a multithreaded, socket-based file sharing system using 
 
 ```bash
 CNT3004_FileSharing/
+├── server/
+│ ├── server.py # Main server file (from Ayesha's blueprint)
+│ ├── init.py
+│ ├── utils/
+│ │ ├── init.py
+│ │ └── file_handler.py # (optional) Helper for file transfers or logging
+│ └── storage/
+│ └── (server-side files saved here)
 │
-├── README.md # Overview, setup instructions, and network guide
-├── requirements.txt # Python dependencies
-├── .gitignore # Files and folders to ignore in Git
+├── client/
+│ ├── client1.py # Client 1 (different function set)
+│ ├── client2.py # Client 2 (different function set)
+│ ├── init.py
+│ └── shared/
+│ └── commands.py # (optional) shared functions between clients
 │
-├── docs/ # Project documentation and presentation
-│ ├── Project_Report.pdf
+├── analysis/
+│ ├── performance_test.py # Measure file transfer or response times
+│ └── network_load.txt # Output logs from testing
+│
+├── docs/
 │ ├── diagrams/
-│ │ └── system_architecture.png
-│ └── presentation/
-│ └── project_demo.mp4
+│ │ └── architecture.png # Diagram showing server-client interaction
+│ └── report.md # Written report / explanation of design
 │
-├── server/ # Server-side application
-│ ├── server_main.py # Entry point for the server
-│ ├── server_auth.py # Authentication and encryption
-│ ├── server_threads.py # Multithreading for concurrent clients
-│ ├── server_fileops.py # Upload, download, delete, dir, subfolder logic
-│ ├── server_analysis.py # Logs performance metrics
-│ └── storage/ # Server-side file storage
-│ ├── text/
-│ ├── audio/
-│ └── video/
+├── tests/
+│ ├── test_server.py
+│ ├── test_client1.py
+│ └── test_client2.py
 │
-├── client/ # Client-side application
-│ ├── client_main.py # Entry point for client UI/CLI
-│ ├── client_auth.py # Handles authentication & encryption
-│ ├── client_network.py # Socket communication logic
-│ ├── client_commands.py # Upload/download/delete/dir commands
-│ └── downloads/ # Folder for downloaded files
-│
-├── analysis/ # Network performance analysis
-│ ├── network_analysis.py # Collects and analyzes metrics
-│ └── results/
-│ ├── performance_data.csv
-│ └── graphs/
-│ ├── upload_rate.png
-│ └── transfer_time.png
-│
-└── tests/ # Testing scripts
-├── test_server.py
-├── test_client.py
-└── test_analysis.py
+├── .gitignore
+├── README.md
+└── requirements.txt
 ```
 
 ## How to Run
