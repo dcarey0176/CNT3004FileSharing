@@ -7,11 +7,11 @@ This project implements a multithreaded, socket-based file sharing system using 
 ```bash
 CNT3004_FileSharing/
 ├── server/
-│ ├── server.py # Main server file (from Ayesha's blueprint)
+│ ├── server.py # Main server file 
 │ ├── init.py
 │ ├── utils/
 │ │ ├── init.py
-│ │ └── file_handler.py # (optional) Helper for file transfers or logging
+│ │ 
 │ └── storage/
 │ └── (server-side files saved here)
 │
@@ -29,7 +29,7 @@ CNT3004_FileSharing/
 ├── docs/
 │ ├── diagrams/
 │ │ └── architecture.png # Diagram showing server-client interaction
-│ └── report.md # Written report / explanation of design
+│ └── report.pdf # Written report / explanation of design
 │
 ├── tests/
 │ ├── test_server.py
