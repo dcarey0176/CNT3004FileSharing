@@ -12,7 +12,6 @@ CNT3004_FileSharing/
 ├── .gitignore # Files and folders to ignore in Git
 │
 ├── docs/ # Project documentation and presentation
-│ ├── Project_Report.docx
 │ ├── Project_Report.pdf
 │ ├── diagrams/
 │ │ └── system_architecture.png
