@@ -2,6 +2,45 @@
 
 This project implements a multithreaded, socket-based file sharing system using Python.
 
+## 📁 Project File Structure
+
+```bash
+CNT3004_FileSharing/
+├── server/
+│ ├── server.py # Main server file 
+│ ├── init.py
+│ ├── utils/
+│ │ ├── init.py
+│ │ 
+│ └── storage/
+│ └── (server-side files saved here)
+│
+├── client/
+│ ├── client1.py # Client 1 (different function set)
+│ ├── client2.py # Client 2 (different function set)
+│ ├── init.py
+│ └── shared/
+│ └── commands.py # (optional) shared functions between clients
+│
+├── analysis/
+│ ├── performance_test.py # Measure file transfer or response times
+│ └── network_load.txt # Output logs from testing
+│
+├── docs/
+│ ├── diagrams/
+│ │ └── architecture.png # Diagram showing server-client interaction
+│ └── report.pdf # Written report / explanation of design
+│
+├── tests/
+│ ├── test_server.py
+│ ├── test_client1.py
+│ └── test_client2.py
+│
+├── .gitignore
+├── README.md
+└── requirements.txt
+```
+
 ## How to Run
 
 ### Server (Computer #1)
