@@ -9,6 +9,8 @@ CNT3004_FileSharing/
 ├── server/
 │ ├── server.py # Main server file 
 │ ├── init.py
+| ├── auth.py
+| ├── users.json
 │ ├── utils/
 │ │ └── init.py
 │ │ 
@@ -30,8 +32,7 @@ CNT3004_FileSharing/
 │
 ├── tests/
 │ ├── test_server.py
-│ ├── test_client1.py
-│ └── test_client2.py
+│ └── test_client.py
 │
 ├── .gitignore
 ├── README.md
