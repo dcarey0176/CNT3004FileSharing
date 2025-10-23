@@ -9,8 +9,8 @@ CNT3004_FileSharing/
 ├── server/
 │ ├── server.py # Main server file 
 │ ├── init.py
-| ├── auth.py
-| ├── users.json
+│ ├── auth.py
+│ ├── users.json
 │ ├── utils/
 │ │ └── init.py
 │ │ 
