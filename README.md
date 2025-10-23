@@ -17,20 +17,25 @@ CNT3004_FileSharing/
 │ └── storage/
 │ └── (server-side files saved here)
 │
-├── client/
+├── client/ 
 │ ├── client.py
 │ ├── init.py
-│ └── shared/
+│ └── downloads/
+│ 
 │
 ├── analysis/
+│ ├── results/ 
+│ ├── init.py
 │ └── performance_test.py # Measure file transfer or response times
 │
 ├── docs/
 │ ├── diagrams/
 │ │ └── architecture.png # Diagram showing server-client interaction
-│ └── report.pdf # Written report / explanation of design
+│ ├── presentation/
+│   └── report.pdf # Written report / explanation of design
 │
 ├── tests/
+│ ├── test_analysis.py
 │ ├── test_server.py
 │ └── test_client.py
 │
