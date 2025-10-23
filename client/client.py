@@ -13,32 +13,31 @@ SERVER_DATA_PATH = "server_data"
 
 def main():
     
-    client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
 
-    # ---- Receive welcome message ----
+    # --- Login process ---
     data = client.recv(SIZE).decode(FORMAT)
     cmd, msg = data.split("@")
     if cmd == "OK":
         print(msg)
 
-    # ---- Authentication ----
     username = input("Username: ")
     password = input("Password: ")
 
-    login_msg = f"LOGIN@{username}@{password}"
-    client.send(login_msg.encode(FORMAT))
+    login_data = f"LOGIN@{username}@{password}"
+    client.send(login_data.encode(FORMAT))
 
-    auth_response = client.recv(SIZE).decode(FORMAT)
-    cmd, msg = auth_response.split("@")
+    response = client.recv(SIZE).decode(FORMAT)
+    cmd, msg = response.split("@")
 
-    if cmd == "ERR":
+    if cmd == "OK" and msg == "AUTH_SUCCESS":
+        print("✅ Login successful! You are connected to the server.")
+    else:
         print("❌ Authentication failed. Disconnecting.")
         client.close()
         return
-    
-    elif cmd == "OK" and msg == "AUTH_SUCCESS":
-        print("✅ Login successful!\n")
+
     while True:
         data = client.recv(SIZE).decode(FORMAT)
         cmd, msg = data.split("@")
