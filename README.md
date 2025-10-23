@@ -31,7 +31,7 @@ CNT3004_FileSharing/
 ├── docs/
 │ ├── diagrams/
 │ │ └── architecture.png # Diagram showing server-client interaction
-│ ├── presentation/
+│ └── presentation/
 │   └── report.pdf # Written report / explanation of design
 │
 ├── tests/
