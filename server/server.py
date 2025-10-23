@@ -20,7 +20,7 @@ def handle_client (conn,addr):
 
     print(f"[NEW CONNECTION] {addr} connected.")
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
-    auth_data = conn.rev(SIZE).decode(FORMAT)
+    auth_data = conn.recv(SIZE).decode(FORMAT)
     cmd, username, password = auth_data.split("@")
 
     if cmd == "LOGIN":
