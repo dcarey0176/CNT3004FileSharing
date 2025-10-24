@@ -2,9 +2,4 @@ __pycache__/
 *.pyc
 *.log
 .env
-server/storage/*
-client/downloads/*
-analysis/results/*
-*.mp4
-*.pdf
-*.docx
+
