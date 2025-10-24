@@ -7,7 +7,7 @@ import socket
 import threading
 from auth import authenticate
 
-IP = "localhost"
+IP = "0.0.0.0"
 PORT = 4450
 ADDR = (IP,PORT)
 SIZE = 1024
