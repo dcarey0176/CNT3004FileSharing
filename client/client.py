@@ -1,18 +1,14 @@
-
-
 import os
 import socket
 
-
 IP = "172.20.10.7"
 PORT = 4450
-ADDR = (IP,PORT)
+ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
 SERVER_DATA_PATH = "server_data"
 
 def main():
-    
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
 
@@ -46,20 +42,63 @@ def main():
         elif cmd == "DISCONNECTED":
             print(f"{msg}")
             break
-        
-        data = input("> ") 
-        data = data.split(" ")
-        cmd = data[0]
 
+        data = input("> ")
+        parts = data.split(" ")
+        cmd = parts[0].upper()
+
+        # --- Handle HELP ---
         if cmd == "HELP":
             client.send(cmd.encode(FORMAT))
+
+        # --- Handle LOGOUT ---
         elif cmd == "LOGOUT":
             client.send(cmd.encode(FORMAT))
             break
 
+        # --- Handle UPLOAD ---
+        elif cmd == "UPLOAD":
+            if len(parts) < 2:
+                print("⚠️ Usage: UPLOAD <filename>")
+                continue
+
+            filename = parts[1]
+
+            if not os.path.exists(filename):
+                print("❌ File does not exist.")
+                continue
+
+            # Send upload command to server
+            client.send(f"UPLOAD@{filename}".encode(FORMAT))
+
+            # Wait for server to acknowledge
+            server_resp = client.recv(SIZE).decode(FORMAT)
+            if server_resp != "READY":
+                print("❌ Server not ready for upload.")
+                continue
+
+            # Send file size
+            filesize = os.path.getsize(filename)
+            client.send(str(filesize).encode(FORMAT))
+
+            # Wait for confirmation
+            client.recv(SIZE)
+
+            # Start sending file data
+            with open(filename, "rb") as f:
+                data = f.read(SIZE)
+                while data:
+                    client.send(data)
+                    data = f.read(SIZE)
+
+            client.send(b"<END>")  # Mark end of file
+            print(f"📤 Uploaded '{filename}' successfully.")
+
+        else:
+            print("❌ Unknown command. Try HELP or UPLOAD <filename>.")
 
     print("Disconnected from the server.")
-    client.close() ## close the connection
+    client.close()
 
 if __name__ == "__main__":
     main()
