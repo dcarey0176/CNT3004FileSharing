@@ -1,6 +1,7 @@
 import os
 import socket
 
+# When using Hamachi, connect to the ethernet adapter IP not the wireless
 IP = "172.20.10.7"
 PORT = 4450
 ADDR = (IP, PORT)

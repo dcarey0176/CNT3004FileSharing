@@ -28,6 +28,7 @@ def handle_client(conn, addr):
         if authenticate(username, password):
             conn.send("OK@AUTH_SUCCESS".encode(FORMAT))
             print(f"[AUTH_SUCCESS] {username} authenticated from {addr}")
+            conn.send("OK@You can now enter commands. Type HELP to see options.".encode(FORMAT))
         else:
             conn.send("ERR@AUTH_FAILED".encode(FORMAT))
             print(f"[AUTH_FAIL] {addr} failed authentication.")
@@ -64,13 +65,15 @@ def handle_client(conn, addr):
 
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
-                conn.send("READY".encode(FORMAT))  # Tell client to start sending
+                # Tell client to start sending
+                conn.send("READY".encode(FORMAT))
 
                 # Receive file size
                 filesize = int(conn.recv(SIZE).decode(FORMAT))
                 conn.send("OK".encode(FORMAT))  # Confirm ready for data
 
-                print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
+                print(
+                    f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
 
                 # Receive file data
                 with open(filepath, "wb") as f:
@@ -81,8 +84,15 @@ def handle_client(conn, addr):
                         f.write(data)
 
                 print(f"[SAVED] File '{filename}' uploaded successfully.")
-                conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
-
+                conn.send(
+                    f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
+            elif cmd == "LIST":
+                files = os.listdir(SERVER_PATH)
+                if not files:
+                    conn.send("OK@No files found.".encode(FORMAT))
+                else:
+                    file_list = "\n".join(files)
+                    conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
 
@@ -97,6 +107,7 @@ def handle_client(conn, addr):
 def main():
     print("🚀 Starting the server...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(ADDR)
     server.listen()
     print(f"✅ Server is listening on {IP}:{PORT}")
