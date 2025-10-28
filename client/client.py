@@ -1,8 +1,7 @@
 import os
 import socket
 
-# When using Hamachi, connect to the ethernet adapter IP not the wireless
-IP = "172.20.10.7"
+IP = "25.52.223.162" # When using HAMACHI, set IP to the ethernet adapter, not wireless LAN
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
@@ -94,9 +93,11 @@ def main():
 
             client.send(b"<END>")  # Mark end of file
             print(f"📤 Uploaded '{filename}' successfully.")
+        elif cmd == "LIST":
+            client.send(cmd.encode(FORMAT))
 
         else:
-            print("❌ Unknown command. Try HELP or UPLOAD <filename>.")
+            print("❌ Unknown command. Try HELP")
 
     print("Disconnected from the server.")
     client.close()
