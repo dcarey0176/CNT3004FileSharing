@@ -17,6 +17,7 @@ SERVER_PATH = "server_data"  # Folder for uploaded files
 if not os.path.exists(SERVER_PATH):
     os.makedirs(SERVER_PATH)
 
+
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
@@ -28,7 +29,8 @@ def handle_client(conn, addr):
         if authenticate(username, password):
             conn.send("OK@AUTH_SUCCESS".encode(FORMAT))
             print(f"[AUTH_SUCCESS] {username} authenticated from {addr}")
-            conn.send("OK@You can now enter commands. Type HELP to see options.".encode(FORMAT))
+            conn.send(
+                "OK@You can now enter commands. Type HELP to see options.".encode(FORMAT))
         else:
             conn.send("ERR@AUTH_FAILED".encode(FORMAT))
             print(f"[AUTH_FAIL] {addr} failed authentication.")
@@ -92,7 +94,20 @@ def handle_client(conn, addr):
                     conn.send("OK@No files found.".encode(FORMAT))
                 else:
                     file_list = "\n".join(files)
-                    conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
+                    conn.send(
+                        f"OK@Files on server:\n{file_list}".encode(FORMAT))
+            elif cmd == "DOWNLOAD":
+                filename = conn.recv(1024).decode(FORMAT)
+                filepath = os.path.join(SERVER_PATH, filename)
+
+                if os.path.exists(filepath):
+                    conn.send("OK".encode(FORMAT))
+                    with open(filepath, "rb") as f:
+                        data = f.read()
+                    conn.sendall(data)
+                    conn.send(b"<END>")
+                else:
+                    conn.send("ERR@File not found.".encode(FORMAT))
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
 
