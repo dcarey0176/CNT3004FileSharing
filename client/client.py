@@ -1,12 +1,13 @@
 import os
 import socket
 
-IP = "172.20.10.7"
+IP = "25.52.223.162"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
 SERVER_DATA_PATH = "server_data"
+
 
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -93,12 +94,32 @@ def main():
 
             client.send(b"<END>")  # Mark end of file
             print(f"📤 Uploaded '{filename}' successfully.")
+        elif cmd == "LIST":
+            client.send(cmd.encode(FORMAT))
+
+        elif cmd == "DOWNLOAD":
+            filename = input("Enter filename to download: ")
+            client.send(cmd.encode(FORMAT))
+            client.send(filename.encode(FORMAT))
+
+            response = client.recv(1024).decode(FORMAT)
+            if response.startswith("OK"):
+                with open(filename, "wb") as f:
+                    while True:
+                        data = client.recv(1024)
+                        if b"<END>" in data:
+                            data = data.replace(b"<END>", b"")
+                            f.write(data)
+                            break
+                        f.write(data)
+                print(f"Downloaded '{filename}' successfully!")
 
         else:
-            print("❌ Unknown command. Try HELP or UPLOAD <filename>.")
+            print("❌ Unknown command. Try HELP")
 
     print("Disconnected from the server.")
     client.close()
+
 
 if __name__ == "__main__":
     main()
