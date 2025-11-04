@@ -37,7 +37,7 @@ def main():
         return
 
     while True:
-        try:
+
         data = client.recv(SIZE).decode(FORMAT)
         cmd, msg = data.split("@")
         if cmd == "OK":
