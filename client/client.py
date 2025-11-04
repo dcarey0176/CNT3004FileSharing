@@ -61,13 +61,13 @@ def main():
         elif cmd == "UPLOAD":
             if len(parts) < 2:
                 print("⚠️ Usage: UPLOAD <filename>")
-                continue
+                client.send(cmd.encode(FORMAT))
 
             filename = parts[1]
 
             if not os.path.exists(filename):
                 print("❌ File does not exist.")
-                continue
+                client.send(cmd.encode(FORMAT))
 
             # Send upload command to server
             client.send(f"UPLOAD@{filename}".encode(FORMAT))
@@ -76,7 +76,7 @@ def main():
             server_resp = client.recv(SIZE).decode(FORMAT)
             if server_resp != "READY":
                 print("❌ Server not ready for upload.")
-                continue
+                client.send(cmd.encode(FORMAT))
 
             # Send file size
             filesize = os.path.getsize(filename)
@@ -114,11 +114,22 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
-                continue
+                client.send(cmd.encode(FORMAT))
+
+        elif cmd == "DELETE":
+            filename = input("Enter filename to delete: ")
+            client.send(cmd.encode(FORMAT))
+            client.send(filename.encode(FORMAT))
+
+            response = client.recv(1024).decode(FORMAT)
+            if response.startswith("OK"):
+                del filename
+                print(f"{filename}' successfully deleted!")
+            client.send(cmd.encode(FORMAT))
 
         else:
             print("❌ Unknown command. Try HELP")
-            continue
+            client.send(cmd.encode(FORMAT))
 
     print("Disconnected from the server.")
     client.close()

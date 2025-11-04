@@ -110,6 +110,20 @@ def handle_client(conn, addr):
                     conn.send(b"<END>")
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
+
+            elif cmd == 'DELETE':
+                if len(parts) < 2:
+                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    continue
+
+                filename = parts[1]
+                filepath = os.path.join(SERVER_PATH, filename)
+
+                if os.path.exists(filepath):
+                    conn.send("OK".encode(FORMAT))
+                    del filepath
+                else:
+                    conn.send("ERR@File not found.".encode(FORMAT))
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
             
