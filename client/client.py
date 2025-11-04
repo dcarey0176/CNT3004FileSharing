@@ -11,6 +11,7 @@ SERVER_DATA_PATH = "server_data"
 
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.settimeout(0.5)
     client.connect(ADDR)
 
     # --- Login process ---
@@ -36,6 +37,7 @@ def main():
         return
 
     while True:
+        try:
         data = client.recv(SIZE).decode(FORMAT)
         cmd, msg = data.split("@")
         if cmd == "OK":
