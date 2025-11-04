@@ -114,6 +114,16 @@ def main():
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
 
+        elif cmd == "DELETE":
+            filename = input("Enter filename to delete: ")
+            client.send(cmd.encode(FORMAT))
+            client.send(filename.encode(FORMAT))
+
+            response = client.recv(1024).decode(FORMAT)
+            if response.startswith("OK"):
+                del filename
+                print(f"{filename}' successfully deleted!")
+
         else:
             print("❌ Unknown command. Try HELP")
 
