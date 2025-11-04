@@ -94,11 +94,12 @@ def main():
 
             client.send(b"<END>")  # Mark end of file
             print(f"📤 Uploaded '{filename}' successfully.")
+
         elif cmd == "LIST":
             client.send(cmd.encode(FORMAT))
 
         elif cmd == "DOWNLOAD":
-            filename = input("Enter filename to download: ")
+            filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
 
@@ -116,7 +117,7 @@ def main():
                 client.send(cmd.encode(FORMAT))
 
         elif cmd == "DELETE":
-            filename = input("Enter filename to delete: ")
+            filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
 
@@ -125,6 +126,7 @@ def main():
                 print(f"{filename}' successfully deleted!")
                 os.remove(f"{SERVER_DATA_PATH}\{filename}")
             client.send(cmd.encode(FORMAT))
+
 
         else:
             print("❌ Unknown command. Try HELP")
