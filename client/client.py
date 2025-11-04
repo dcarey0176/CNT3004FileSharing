@@ -113,6 +113,7 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
+                continue
 
         elif cmd == "DELETE":
             filename = input("Enter filename to delete: ")
@@ -126,6 +127,7 @@ def main():
 
         else:
             print("❌ Unknown command. Try HELP")
+            continue
 
     print("Disconnected from the server.")
     client.close()
