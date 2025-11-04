@@ -124,7 +124,7 @@ def main():
             response = client.recv(1024).decode(FORMAT)
             if response.startswith("OK"):
                 print(f"{filename}' successfully deleted!")
-                os.remove(f"{SERVER_DATA_PATH}\{filename}")
+                os.remove(f"{SERVER_DATA_PATH}\\{filename}")
             client.send(cmd.encode(FORMAT))
 
 

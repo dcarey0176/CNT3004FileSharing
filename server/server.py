@@ -88,7 +88,7 @@ def handle_client(conn, addr):
                 print(f"[SAVED] File '{filename}' uploaded successfully.")
                 conn.send(
                     f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
-            
+
             elif cmd == "LIST":
                 files = os.listdir(SERVER_PATH)
                 if not files:
@@ -97,7 +97,7 @@ def handle_client(conn, addr):
                     file_list = "\n".join(files)
                     conn.send(
                         f"OK@Files on server:\n{file_list}".encode(FORMAT))
-            
+
             elif cmd == "DOWNLOAD":
                 filename = conn.recv(1024).decode(FORMAT)
                 filepath = os.path.join(SERVER_PATH, filename)
@@ -112,21 +112,22 @@ def handle_client(conn, addr):
                     conn.send("ERR@File not found.".encode(FORMAT))
 
             elif cmd == 'DELETE':
-                if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
-                    continue
-
                 filename = parts[1]
-                filepath = os.path.join(SERVER_PATH, filename)
+                conn.send(cmd.encode(FORMAT))
+                conn.send(filename.encode(FORMAT))
 
+                response = conn.recv(1024).decode(FORMAT)
                 if os.path.exists(filepath):
-                    conn.send("OK".encode(FORMAT))
-                    del filepath
+                    print(f"{filename}' successfully deleted!")
+                    os.remove(f"{SERVER_PATH}\\{filename}")
+                    conn.send(cmd.encode(FORMAT))
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
+
+
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
-            
+
 
         except Exception as e:
             print(f"[ERROR] {addr}: {e}")
