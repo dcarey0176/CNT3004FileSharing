@@ -114,7 +114,7 @@ def main():
                             f.write(data)
                             break
                         f.write(data)
-                print(f"Downloaded '{filename}' successfully!")
+                #print(f"Downloaded '{filename}' successfully!")
                 #client.send(cmd.encode(FORMAT))
                 continue
 
@@ -125,15 +125,16 @@ def main():
             print(f'sent cmd and filename')
 
             response = client.recv(1024).decode(FORMAT)
+            print(response)
             if response.startswith("OK"):
-                print(f"{filename}' successfully deleted!")
+                #print(f"{filename}' successfully deleted!")
+                print(f"response is OK")
                 #os.remove(f"{SERVER_DATA_PATH}\\'{filename}")
-                continue
 
 
         else:
             print("❌ Unknown command. Try HELP")
-            client.send(cmd.encode(FORMAT))
+            #client.send(cmd.encode(FORMAT))
 
     print("Disconnected from the server.")
     client.close()
