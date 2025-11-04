@@ -11,6 +11,7 @@ SERVER_DATA_PATH = "server_data"
 
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  
     client.connect(ADDR)
 
     # --- Login process ---
@@ -67,6 +68,7 @@ def main():
 
             if not os.path.exists(filename):
                 print("❌ File does not exist.")
+                client.send(cmd.encode(FORMAT))
                 continue
 
             # Send upload command to server
@@ -76,6 +78,7 @@ def main():
             server_resp = client.recv(SIZE).decode(FORMAT)
             if server_resp != "READY":
                 print("❌ Server not ready for upload.")
+                client.send(cmd.encode(FORMAT))
                 continue
 
             # Send file size
@@ -94,11 +97,13 @@ def main():
 
             client.send(b"<END>")  # Mark end of file
             print(f"📤 Uploaded '{filename}' successfully.")
+            continue
+
         elif cmd == "LIST":
             client.send(cmd.encode(FORMAT))
 
         elif cmd == "DOWNLOAD":
-            filename = input("Enter filename to download: ")
+            filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
 
@@ -113,9 +118,22 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
+                    
+            
 
+        elif cmd == "DELETE":
+            filename = parts[1]
+            client.send(cmd.encode(FORMAT))
+            client.send(filename.encode(FORMAT))
+
+            response = client.recv(1024).decode(FORMAT)
+            if response.startswith("OK@"):
+                print(f"{filename} successfully deleted!")
+            else:
+                print("❌ File not found on server.")
         else:
-            print("❌ Unknown command. Try HELP")
+            print("Command not found")
+        
 
     print("Disconnected from the server.")
     client.close()
