@@ -1,7 +1,7 @@
 import os
 import socket
 
-IP = "25.52.223.162"
+IP = "25.40.106.181"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
@@ -67,7 +67,7 @@ def main():
 
             if not os.path.exists(filename):
                 print("❌ File does not exist.")
-                client.send(cmd.encode(FORMAT))
+                #client.send(cmd.encode(FORMAT))
                 continue
 
             # Send upload command to server
@@ -77,7 +77,7 @@ def main():
             server_resp = client.recv(SIZE).decode(FORMAT)
             if server_resp != "READY":
                 print("❌ Server not ready for upload.")
-                client.send(cmd.encode(FORMAT))
+                #client.send(cmd.encode(FORMAT))
                 continue
 
             # Send file size
@@ -115,20 +115,20 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
-                client.send(cmd.encode(FORMAT))
+                #client.send(cmd.encode(FORMAT))
                 continue
 
         elif cmd == "DELETE":
             filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
+            print(f'sent cmd and filename')
 
             response = client.recv(1024).decode(FORMAT)
             if response.startswith("OK"):
                 print(f"{filename}' successfully deleted!")
-                os.remove(f"{SERVER_DATA_PATH}\\{filename}")
-            client.send(cmd.encode(FORMAT))
-            continue
+                #os.remove(f"{SERVER_DATA_PATH}\\'{filename}")
+                continue
 
 
         else:
