@@ -68,6 +68,7 @@ def main():
             if not os.path.exists(filename):
                 print("❌ File does not exist.")
                 client.send(cmd.encode(FORMAT))
+                continue
 
             # Send upload command to server
             client.send(f"UPLOAD@{filename}".encode(FORMAT))
@@ -77,6 +78,7 @@ def main():
             if server_resp != "READY":
                 print("❌ Server not ready for upload.")
                 client.send(cmd.encode(FORMAT))
+                continue
 
             # Send file size
             filesize = os.path.getsize(filename)
@@ -93,7 +95,6 @@ def main():
                     data = f.read(SIZE)
 
             client.send(b"<END>")  # Mark end of file
-            print(f"📤 Uploaded '{filename}' successfully.")
 
         elif cmd == "LIST":
             client.send(cmd.encode(FORMAT))
@@ -115,6 +116,7 @@ def main():
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
                 client.send(cmd.encode(FORMAT))
+                continue
 
         elif cmd == "DELETE":
             filename = parts[1]
@@ -126,6 +128,7 @@ def main():
                 print(f"{filename}' successfully deleted!")
                 os.remove(f"{SERVER_DATA_PATH}\\{filename}")
             client.send(cmd.encode(FORMAT))
+            continue
 
 
         else:
