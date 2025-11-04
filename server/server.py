@@ -124,6 +124,7 @@ def handle_client(conn, addr):
 
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
+                continue
 
 
         except Exception as e:
