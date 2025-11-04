@@ -118,9 +118,9 @@ def handle_client(conn, addr):
                 if os.path.exists(filepath):
                     conn.send("OK".encode(FORMAT))
                     os.remove(f"{filename}")
-                    conn.send(f"OK@{filename}' successfully deleted!")
+                    conn.sendall(data)
+                    conn.send(b"<END>")
 
-                    conn.send(cmd.encode(FORMAT))
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
