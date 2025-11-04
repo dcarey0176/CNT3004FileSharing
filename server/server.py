@@ -56,7 +56,7 @@ def handle_client(conn, addr):
 
             # --- Handle HELP ---
             elif cmd == "HELP":
-                send_data += "Available commands:\nHELP, UPLOAD <filename>, LOGOUT"
+                send_data += "Available commands:\nUPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGOUT"
                 conn.send(send_data.encode(FORMAT))
 
             # --- Handle FILE UPLOAD ---
@@ -88,6 +88,7 @@ def handle_client(conn, addr):
                 print(f"[SAVED] File '{filename}' uploaded successfully.")
                 conn.send(
                     f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
+            
             elif cmd == "LIST":
                 files = os.listdir(SERVER_PATH)
                 if not files:
@@ -96,6 +97,7 @@ def handle_client(conn, addr):
                     file_list = "\n".join(files)
                     conn.send(
                         f"OK@Files on server:\n{file_list}".encode(FORMAT))
+            
             elif cmd == "DOWNLOAD":
                 filename = conn.recv(1024).decode(FORMAT)
                 filepath = os.path.join(SERVER_PATH, filename)
@@ -110,6 +112,7 @@ def handle_client(conn, addr):
                     conn.send("ERR@File not found.".encode(FORMAT))
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
+            
 
         except Exception as e:
             print(f"[ERROR] {addr}: {e}")

@@ -113,9 +113,11 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
+                continue
 
         else:
             print("❌ Unknown command. Try HELP")
+            continue
 
     print("Disconnected from the server.")
     client.close()
