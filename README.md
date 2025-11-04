@@ -80,4 +80,6 @@ connect 192.168.1.10 5000
 4. Ensure firewall allows inbound connections on the selected port (default 5000).
 
 ## Authors
-- Add team members here
+- Joel Figueroa
+- Dennis Carey
+- Natasha Linares
