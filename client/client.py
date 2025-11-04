@@ -8,7 +8,6 @@ SIZE = 1024
 FORMAT = "utf-8"
 SERVER_DATA_PATH = "server_data"
 
-
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
@@ -61,13 +60,12 @@ def main():
         elif cmd == "UPLOAD":
             if len(parts) < 2:
                 print("⚠️ Usage: UPLOAD <filename>")
-                client.send(cmd.encode(FORMAT))
+                continue
 
             filename = parts[1]
 
             if not os.path.exists(filename):
                 print("❌ File does not exist.")
-                #client.send(cmd.encode(FORMAT))
                 continue
 
             # Send upload command to server
@@ -77,7 +75,6 @@ def main():
             server_resp = client.recv(SIZE).decode(FORMAT)
             if server_resp != "READY":
                 print("❌ Server not ready for upload.")
-                #client.send(cmd.encode(FORMAT))
                 continue
 
             # Send file size
@@ -95,12 +92,12 @@ def main():
                     data = f.read(SIZE)
 
             client.send(b"<END>")  # Mark end of file
-
+            print(f"📤 Uploaded '{filename}' successfully.")
         elif cmd == "LIST":
             client.send(cmd.encode(FORMAT))
-
+            
         elif cmd == "DOWNLOAD":
-            filename = parts[1]
+            filename = input("Enter filename to download: ")
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
 
@@ -115,29 +112,12 @@ def main():
                             break
                         f.write(data)
                 print(f"Downloaded '{filename}' successfully!")
-                #client.send(cmd.encode(FORMAT))
-                continue
-
-        elif cmd == "DELETE":
-            filename = parts[1]
-            client.send(cmd.encode(FORMAT))
-            client.send(filename.encode(FORMAT))
-            print(f'sent cmd and filename')
-
-            response = client.recv(1024).decode(FORMAT)
-            if response.startswith("OK"):
-                print(f"{filename}' successfully deleted!")
-                #os.remove(f"{SERVER_DATA_PATH}\\'{filename}")
-                continue
-
-
+       
         else:
             print("❌ Unknown command. Try HELP")
-            client.send(cmd.encode(FORMAT))
 
     print("Disconnected from the server.")
     client.close()
-
 
 if __name__ == "__main__":
     main()
