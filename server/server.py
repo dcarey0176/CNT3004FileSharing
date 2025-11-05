@@ -110,8 +110,10 @@ def handle_client(conn, addr):
                             break
                         conn.send(data)
                 conn.send(b"<END>")
+               
             else:
                 conn.send("ERR@File not found.".encode(FORMAT))
+
 
         elif cmd == "DELETE":
             filename = conn.recv(1024).decode(FORMAT)
@@ -123,8 +125,10 @@ def handle_client(conn, addr):
             else:
                 conn.send("ERR@File not found.".encode(FORMAT))
             conn.send(f"OK@Successfully deleted {filename}".encode(FORMAT))
+
         else:
             conn.send("ERR@Unknown command".encode(FORMAT))
+
 
 
     print(f"[DISCONNECTED] {addr} disconnected.")
