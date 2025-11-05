@@ -1,172 +1,164 @@
 import os
 import socket
-import time
 
-IP = "25.40.106.181"
+IP = "25.40.106.181"      # <-- change to your server's IP if needed
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
-SERVER_DATA_PATH = "server_data"
 
 
-def receive_response(client):
-    """Receive and decode a server response."""
+def recv_exact(conn: socket.socket, nbytes: int) -> bytes:
+    """Receive exactly *nbytes* from the socket."""
+    data = b""
+    while len(data) < nbytes:
+        packet = conn.recv(nbytes - len(data))
+        if not packet:
+            raise ConnectionError("Socket closed while receiving")
+        data += packet
+    return data
+
+
+def receive_response(conn: socket.socket) -> str:
+    """Receive a text response (expects a single UTF-8 message <= SIZE)."""
     try:
-        data = client.recv(SIZE).decode(FORMAT)
-        return data
-    except Exception as e:
-        print(f"[ERROR] Failed to receive response: {e}")
-        return ""
+        return conn.recv(SIZE).decode(FORMAT).strip()
+    except Exception:
+        return "Failed to receive response."
 
 
-def handle_upload(client, filename):
-    """Handles uploading a file to the server."""
+# ----------------------- Upload -----------------------
+def handle_upload(conn: socket.socket, filename: str):
     if not os.path.exists(filename):
-        print("❌ File does not exist.")
+        print("File does not exist.")
         return
 
-    # Send upload request
-    client.send(f"UPLOAD@{filename}".encode(FORMAT))
-    server_resp = client.recv(SIZE).decode(FORMAT)
+    conn.send(f"UPLOAD@{filename}".encode(FORMAT))
 
-    if server_resp != "READY":
-        print("❌ Server not ready for upload.")
+    if receive_response(conn) != "READY":
+        print("Server not ready for upload.")
         return
 
     filesize = os.path.getsize(filename)
-    client.send(str(filesize).encode(FORMAT))
-    client.recv(SIZE)  # Wait for confirmation
-
-    print(f"⬆️ Uploading '{filename}' ({filesize} bytes)...")
-    start = time.time()
-
-    with open(filename, "rb") as f:
-        while True:
-            data = f.read(SIZE)
-            if not data:
-                break
-            client.send(data)
-
-    client.send(b"<END>")
-
-    elapsed = time.time() - start
-    speed = filesize / elapsed / 1024
-    print(f"✅ Upload complete in {elapsed:.2f}s ({speed:.1f} KB/s)")
-
-    response = receive_response(client)
-    if response:
-        print(response.replace("OK@", ""))
-
-
-def handle_download(client, filename):
-    """Handles downloading a file from the server."""
-    client.send(f"DOWNLOAD@{filename}".encode(FORMAT))
-    response = client.recv(SIZE).decode(FORMAT)
-
-    if not response.startswith("OK"):
-        print(response)
+    conn.send(str(filesize).encode(FORMAT))
+    if receive_response(conn) != "OK":
+        print("Server rejected file size.")
         return
 
-    local_name = f"downloaded_{filename}"
-    print(f"⬇️ Downloading '{filename}'...")
+    with open(filename, "rb") as f:
+        while chunk := f.read(SIZE):
+            conn.send(chunk)
 
-    start = time.time()
-    with open(local_name, "wb") as f:
-        while True:
-            data = client.recv(SIZE)
-            if data == b"<END>":
-                break
+    print(receive_response(conn))
+
+
+# ----------------------- Download -----------------------
+def handle_download(conn: socket.socket, filename: str):
+    conn.send(f"DOWNLOAD@{filename}".encode(FORMAT))
+    resp = receive_response(conn)
+
+    if not resp.startswith("OK"):
+        print(resp)
+        return
+
+    # OK@<size>
+    parts = resp.split("@", 2)
+    if len(parts) < 2:
+        print("Malformed size response from server.")
+        return
+    try:
+        filesize = int(parts[1])
+    except ValueError:
+        print("Invalid file size received.")
+        return
+
+    received = 0
+    with open(filename, "wb") as f:
+        while received < filesize:
+            chunk_size = min(SIZE, filesize - received)
+            data = recv_exact(conn, chunk_size)
             f.write(data)
+            received += len(data)
 
-    elapsed = time.time() - start
-    file_size = os.path.getsize(local_name)
-    speed = file_size / elapsed / 1024
-    print(f"✅ Downloaded '{local_name}' in {elapsed:.2f}s ({speed:.1f} KB/s)")
+    print(f"Downloaded '{filename}' successfully!")
 
 
-def handle_list(client):
-    """Request and display the list of files on the server."""
-    client.send("LIST".encode(FORMAT))
-    response = receive_response(client)
-    print(response.replace("OK@", ""))
+# ----------------------- Delete -----------------------
+def handle_delete(conn: socket.socket, filename: str):
+    conn.send(f"DELETE@{filename}".encode(FORMAT))
+    print(receive_response(conn))
 
 
-def handle_delete(client, filename):
-    """Send request to delete a file from the server."""
-    client.send("DELETE".encode(FORMAT))
-    client.send(filename.encode(FORMAT))
-    response = receive_response(client)
-    print(response)
-
-
+# ----------------------- Main -----------------------
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
 
-    # --- Login Phase ---
-    data = client.recv(SIZE).decode(FORMAT)
-    cmd, msg = data.split("@")
+    # ----- Welcome -----
+    welcome = client.recv(SIZE).decode(FORMAT)
+    cmd, msg = welcome.split("@", 1)
     if cmd == "OK":
         print(msg)
 
+    # ----- Login -----
     username = input("Username: ")
     password = input("Password: ")
+    client.send(f"LOGIN@{username}@{password}".encode(FORMAT))
 
-    login_data = f"LOGIN@{username}@{password}"
-    client.send(login_data.encode(FORMAT))
-
-    response = client.recv(SIZE).decode(FORMAT)
-    cmd, msg = response.split("@")
-
-    if cmd == "OK" and msg == "AUTH_SUCCESS":
-        print("✅ Login successful! You are connected to the server.")
-    else:
-        print("❌ Authentication failed. Disconnecting.")
+    login_resp = client.recv(SIZE).decode(FORMAT)
+    parts = login_resp.split("@")
+    if len(parts) < 2 or parts[0] != "OK" or parts[1] != "AUTH_SUCCESS":
+        print("Authentication failed.")
         client.close()
         return
 
-    while True:
-        data = input("\n> ").strip()
-        if not data:
-            continue
+    print("Login successful! You are connected to the server.")
+    if len(parts) > 2:
+        print("@".join(parts[2:]))      # any extra welcome text
 
-        parts = data.split(" ")
+    # ----- Command Loop -----
+    while True:
+        cmd_line = input("> ").strip()
+        if not cmd_line:
+            continue
+        parts = cmd_line.split(maxsplit=1)
         cmd = parts[0].upper()
 
         if cmd == "HELP":
-            client.send(cmd.encode(FORMAT))
-            print(receive_response(client).replace("OK@", ""))
+            client.send("HELP".encode(FORMAT))
+            print(receive_response(client))
 
         elif cmd == "LOGOUT":
-            client.send(cmd.encode(FORMAT))
+            client.send("LOGOUT".encode(FORMAT))
+            print(receive_response(client))
             break
 
         elif cmd == "UPLOAD":
             if len(parts) < 2:
-                print("⚠️ Usage: UPLOAD <filename>")
+                print("Usage: UPLOAD <filename>")
                 continue
             handle_upload(client, parts[1])
 
-        elif cmd == "LIST":
-            handle_list(client)
-
         elif cmd == "DOWNLOAD":
             if len(parts) < 2:
-                print("⚠️ Usage: DOWNLOAD <filename>")
+                print("Usage: DOWNLOAD <filename>")
                 continue
             handle_download(client, parts[1])
 
         elif cmd == "DELETE":
             if len(parts) < 2:
-                print("⚠️ Usage: DELETE <filename>")
+                print("Usage: DELETE <filename>")
                 continue
             handle_delete(client, parts[1])
 
-        else:
-            print("❌ Unknown command. Try HELP.")
+        elif cmd == "LIST":
+            client.send("LIST".encode(FORMAT))
+            print(receive_response(client))
 
-    print("🔌 Disconnected from the server.")
+        else:
+            print("Unknown command. Type HELP.")
+
+    print("Disconnected from the server.")
     client.close()
 
 

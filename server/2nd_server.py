@@ -11,84 +11,70 @@ PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
-SERVER_PATH = "server_data"  # Folder for uploaded files
+SERVER_PATH = "server_data"          # Folder where uploaded files are stored
 
-# Make sure upload directory exists
+# ----------------------------------------------------------------------
+# Ensure the upload directory exists
+# ----------------------------------------------------------------------
 if not os.path.exists(SERVER_PATH):
     os.makedirs(SERVER_PATH)
 
 
-def handle_client(conn, addr):
+def handle_client(conn: socket.socket, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
-    # --- Login Phase ---
-    auth_data = conn.recv(SIZE).decode(FORMAT)
-    cmd, username, password = auth_data.split("@")
-    if cmd == "LOGIN":
+    # ----------------------- Login Phase -----------------------
+    try:
+        auth_data = conn.recv(SIZE).decode(FORMAT)
+        parts = auth_data.split("@")
+        if len(parts) != 3 or parts[0] != "LOGIN":
+            conn.send("ERR@Bad login format".encode(FORMAT))
+            conn.close()
+            return
+
+        _, username, password = parts
         if authenticate(username, password):
-            conn.send("OK@AUTH_SUCCESS".encode(FORMAT))
-            print(f"[AUTH_SUCCESS] {username} authenticated from {addr}")
             conn.send(
-                "OK@You can now enter commands. Type HELP to see options.".encode(FORMAT))
+                "OK@AUTH_SUCCESS@You can now enter commands. Type HELP to see options."
+                .encode(FORMAT)
+            )
+            print(f"[AUTH_SUCCESS] {username} from {addr}")
         else:
             conn.send("ERR@AUTH_FAILED".encode(FORMAT))
             print(f"[AUTH_FAIL] {addr} failed authentication.")
             conn.close()
             return
+    except Exception as e:
+        print(f"[LOGIN ERROR] {addr}: {e}")
+        conn.close()
+        return
 
-    # --- Main Command Loop ---
+    # ----------------------- Main Command Loop -----------------------
     while True:
         try:
-            data = conn.recv(SIZE).decode(FORMAT)
+            data = conn.recv(SIZE).decode(FORMAT).strip()
             if not data:
                 break
 
             parts = data.split("@")
             cmd = parts[0].upper()
-            send_data = "OK@"
 
-            # --- Handle LOGOUT ---
+            # ---------- LOGOUT ----------
             if cmd == "LOGOUT":
-                send_data += "Disconnected from the server."
-                conn.send(f"DISCONNECTED@{send_data}".encode(FORMAT))
+                conn.send("OK@Disconnected from the server.".encode(FORMAT))
                 break
 
-            # --- Handle HELP ---
+            # ---------- HELP ----------
             elif cmd == "HELP":
-                send_data += "Available commands:\nUPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGOUT"
-                conn.send(send_data.encode(FORMAT))
+                msg = (
+                    "OK@Available commands:\n"
+                    "UPLOAD <filename>\nDOWNLOAD <filename>\n"
+                    "DELETE <filename>\nLIST\nLOGOUT"
+                )
+                conn.send(msg.encode(FORMAT))
 
-            # --- Handle UPLOAD ---
-            elif cmd == "UPLOAD":
-                if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
-                    continue
-
-                filename = parts[1]
-                filepath = os.path.join(SERVER_PATH, filename)
-
-                # Tell client to start sending
-                conn.send("READY".encode(FORMAT))
-
-                # Receive file size
-                filesize = int(conn.recv(SIZE).decode(FORMAT))
-                conn.send("OK".encode(FORMAT))  # Confirm ready for data
-
-                print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
-
-                # Receive file data
-                with open(filepath, "wb") as f:
-                    while True:
-                        file_data = conn.recv(SIZE)
-                        if file_data == b"<END>":
-                            break
-                        f.write(file_data)
-
-                print(f"[SAVED] File '{filename}' uploaded successfully.")
-                conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
-
-            # --- Handle LIST ---
+            # ---------- LIST ----------
             elif cmd == "LIST":
                 files = os.listdir(SERVER_PATH)
                 if not files:
@@ -97,41 +83,74 @@ def handle_client(conn, addr):
                     file_list = "\n".join(files)
                     conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
 
-            # --- Handle DOWNLOAD ---
+            # ---------- UPLOAD ----------
+            elif cmd == "UPLOAD":
+                if len(parts) < 2:
+                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    continue
+                filename = parts[1]
+                filepath = os.path.join(SERVER_PATH, filename)
+
+                # Tell client we are ready
+                conn.send("READY".encode(FORMAT))
+
+                # Receive file size
+                size_str = conn.recv(SIZE).decode(FORMAT).strip()
+                filesize = int(size_str)
+                conn.send("OK".encode(FORMAT))          # confirm
+
+                print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
+
+                received = 0
+                with open(filepath, "wb") as f:
+                    while received < filesize:
+                        chunk_size = min(SIZE, filesize - received)
+                        chunk = conn.recv(chunk_size)
+                        if not chunk:
+                            raise ConnectionError("Client disconnected mid-upload")
+                        f.write(chunk)
+                        received += len(chunk)
+
+                print(f"[SAVED] '{filename}' uploaded successfully.")
+                conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
+
+            # ---------- DOWNLOAD ----------
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
                     continue
-
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
 
-                if os.path.exists(filepath):
-                    conn.send("OK".encode(FORMAT))
-                    with open(filepath, "rb") as f:
-                        while chunk := f.read(SIZE):
-                            conn.send(chunk)
-                    conn.send(b"<END>")
-                    print(f"[SENT] File '{filename}' sent to {addr}")
-                else:
+                if not os.path.exists(filepath):
                     conn.send("ERR@File not found.".encode(FORMAT))
+                    continue
 
-            # --- Handle DELETE ---
+                filesize = os.path.getsize(filepath)
+                conn.send(f"OK@{filesize}".encode(FORMAT))
+
+                with open(filepath, "rb") as f:
+                    while chunk := f.read(SIZE):
+                        conn.send(chunk)
+
+                print(f"[SENT] '{filename}' sent to {addr}")
+
+            # ---------- DELETE ----------
             elif cmd == "DELETE":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
                     continue
-
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
 
                 if os.path.exists(filepath):
                     os.remove(filepath)
                     conn.send(f"OK@File '{filename}' deleted successfully.".encode(FORMAT))
-                    print(f"[DELETE] File '{filename}' deleted by {addr}")
+                    print(f"[DELETE] '{filename}' removed by {addr}")
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
+            # ---------- UNKNOWN ----------
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
 
@@ -143,13 +162,14 @@ def handle_client(conn, addr):
     conn.close()
 
 
+# ----------------------------------------------------------------------
 def main():
-    print("🚀 Starting the server...")
+    print("Starting the server...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(ADDR)
     server.listen()
-    print(f"✅ Server is listening on {IP}:{PORT}")
+    print(f"Server is listening on {IP}:{PORT}")
 
     while True:
         conn, addr = server.accept()
