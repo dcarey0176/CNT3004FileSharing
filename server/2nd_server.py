@@ -11,7 +11,7 @@ PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
-SERVER_PATH = "server_data"          # Folder where uploaded files are stored
+SERVER_PATH = "server/server_data"          # Folder where uploaded files are stored
 
 # ----------------------------------------------------------------------
 # Ensure the upload directory exists

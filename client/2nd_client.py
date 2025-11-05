@@ -1,5 +1,8 @@
 import os
 import socket
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import type_effect
 
 IP = "25.40.106.181"      # <-- change to your server's IP if needed
 PORT = 4450
@@ -19,7 +22,7 @@ def recv_exact(conn: socket.socket, nbytes: int) -> bytes:
     return data
 
 
-def receive_response(conn: socket.socket) -> str:
+def receive_response(conn: socket.socket):
     """Receive a text response (expects a single UTF-8 message <= SIZE)."""
     try:
         return conn.recv(SIZE).decode(FORMAT).strip()
@@ -30,26 +33,26 @@ def receive_response(conn: socket.socket) -> str:
 # ----------------------- Upload -----------------------
 def handle_upload(conn: socket.socket, filename: str):
     if not os.path.exists(filename):
-        print("File does not exist.")
+        type_effect.type_print("File does not exist.")
         return
 
     conn.send(f"UPLOAD@{filename}".encode(FORMAT))
 
     if receive_response(conn) != "READY":
-        print("Server not ready for upload.")
+        type_effect.type_print("Server not ready for upload.")
         return
 
     filesize = os.path.getsize(filename)
     conn.send(str(filesize).encode(FORMAT))
     if receive_response(conn) != "OK":
-        print("Server rejected file size.")
+        type_effect.type_print("Server rejected file size.")
         return
 
     with open(filename, "rb") as f:
         while chunk := f.read(SIZE):
             conn.send(chunk)
 
-    print(receive_response(conn))
+    type_effect.type_print(receive_response(conn))
 
 
 # ----------------------- Download -----------------------
@@ -58,18 +61,18 @@ def handle_download(conn: socket.socket, filename: str):
     resp = receive_response(conn)
 
     if not resp.startswith("OK"):
-        print(resp)
+        type_effect.type_print(resp)
         return
 
     # OK@<size>
     parts = resp.split("@", 2)
     if len(parts) < 2:
-        print("Malformed size response from server.")
+        type_effect.type_print("Malformed size response from server.")
         return
     try:
         filesize = int(parts[1])
     except ValueError:
-        print("Invalid file size received.")
+        type_effect.type_print("Invalid file size received.")
         return
 
     received = 0
@@ -80,13 +83,13 @@ def handle_download(conn: socket.socket, filename: str):
             f.write(data)
             received += len(data)
 
-    print(f"Downloaded '{filename}' successfully!")
+    type_effect.type_print(f"Downloaded '{filename}' successfully!")
 
 
 # ----------------------- Delete -----------------------
 def handle_delete(conn: socket.socket, filename: str):
     conn.send(f"DELETE@{filename}".encode(FORMAT))
-    print(receive_response(conn))
+    type_effect.type_print(receive_response(conn))
 
 
 # ----------------------- Main -----------------------
@@ -98,7 +101,7 @@ def main():
     welcome = client.recv(SIZE).decode(FORMAT)
     cmd, msg = welcome.split("@", 1)
     if cmd == "OK":
-        print(msg)
+        type_effect.type_print(msg)
 
     # ----- Login -----
     username = input("Username: ")
@@ -108,17 +111,19 @@ def main():
     login_resp = client.recv(SIZE).decode(FORMAT)
     parts = login_resp.split("@")
     if len(parts) < 2 or parts[0] != "OK" or parts[1] != "AUTH_SUCCESS":
-        print("Authentication failed.")
+        type_effect.type_print("Authentication failed.")
         client.close()
         return
-
-    print("Login successful! You are connected to the server.")
+    type_effect.spacing()
+    type_effect.type_print("Login successful! You are connected to the server.")
+    type_effect.spacing()
     if len(parts) > 2:
-        print("@".join(parts[2:]))      # any extra welcome text
+        type_effect.type_print("@".join(parts[2:]))      # any extra welcome text
 
     # ----- Command Loop -----
     while True:
         cmd_line = input("> ").strip()
+        type_effect.spacing()
         if not cmd_line:
             continue
         parts = cmd_line.split(maxsplit=1)
@@ -126,39 +131,39 @@ def main():
 
         if cmd == "HELP":
             client.send("HELP".encode(FORMAT))
-            print(receive_response(client))
+            type_effect.type_print(receive_response(client))
 
         elif cmd == "LOGOUT":
             client.send("LOGOUT".encode(FORMAT))
-            print(receive_response(client))
+            type_effect.type_print(receive_response(client))
             break
 
         elif cmd == "UPLOAD":
             if len(parts) < 2:
-                print("Usage: UPLOAD <filename>")
+                type_effect.type_print("Usage: UPLOAD <filename>")
                 continue
             handle_upload(client, parts[1])
-
+            
         elif cmd == "DOWNLOAD":
             if len(parts) < 2:
-                print("Usage: DOWNLOAD <filename>")
+                type_effect.type_print("Usage: DOWNLOAD <filename>")
                 continue
             handle_download(client, parts[1])
 
         elif cmd == "DELETE":
             if len(parts) < 2:
-                print("Usage: DELETE <filename>")
+                type_effect.type_print("Usage: DELETE <filename>")
                 continue
             handle_delete(client, parts[1])
 
         elif cmd == "LIST":
             client.send("LIST".encode(FORMAT))
-            print(receive_response(client))
+            type_effect.type_print(receive_response(client))
 
         else:
-            print("Unknown command. Type HELP.")
+            type_effect.type_print("Unknown command. Type HELP.")
 
-    print("Disconnected from the server.")
+    type_effect.type_print("Disconnected from the server.")
     client.close()
 
 
