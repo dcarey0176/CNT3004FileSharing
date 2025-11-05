@@ -24,6 +24,7 @@ if not os.path.exists(SERVER_PATH):
 
 
 def handle_client(conn: socket.socket, addr):
+    type_effect.spacing()
     print(f"[NEW CONNECTION] {addr} connected.")
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
@@ -55,6 +56,7 @@ def handle_client(conn: socket.socket, addr):
 
     # ----------------------- Main Command Loop -----------------------
     while True:
+        type_effect.spacing()
         try:
             data = conn.recv(SIZE).decode(FORMAT).strip()
             if not data:
@@ -167,14 +169,17 @@ def handle_client(conn: socket.socket, addr):
 
 # ----------------------------------------------------------------------
 def main():
+    type_effect.spacing()
     print("Starting the server...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(ADDR)
     server.listen()
     print(f"Server is listening on {IP}:{PORT}")
+    type_effect.spacing()
 
     while True:
+        type_effect.spacing()
         conn, addr = server.accept()
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
