@@ -24,7 +24,7 @@ if not os.path.exists(SERVER_PATH):
 
 
 def handle_client(conn: socket.socket, addr):
-    print(f"[NEW CONNECTION] {addr} connected.")
+    type_effect.type_print(f"[NEW CONNECTION] {addr} connected.")
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
     # ----------------------- Login Phase -----------------------
@@ -42,14 +42,14 @@ def handle_client(conn: socket.socket, addr):
                 "OK@AUTH_SUCCESS@You can now enter commands. Type HELP to see options."
                 .encode(FORMAT)
             )
-            print(f"[AUTH_SUCCESS] {username} from {addr}")
+            type_effect.type_print(f"[AUTH_SUCCESS] {username} from {addr}")
         else:
             conn.send("ERR@AUTH_FAILED".encode(FORMAT))
-            print(f"[AUTH_FAIL] {addr} failed authentication.")
+            type_effect.type_print(f"[AUTH_FAIL] {addr} failed authentication.")
             conn.close()
             return
     except Exception as e:
-        print(f"[LOGIN ERROR] {addr}: {e}")
+        type_effect.type_print(f"[LOGIN ERROR] {addr}: {e}")
         conn.close()
         return
 
@@ -102,7 +102,7 @@ def handle_client(conn: socket.socket, addr):
                 filesize = int(size_str)
                 conn.send("OK".encode(FORMAT))          # confirm
 
-                print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
+                type_effect.type_print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
 
                 received = 0
                 with open(filepath, "wb") as f:
@@ -114,7 +114,7 @@ def handle_client(conn: socket.socket, addr):
                         f.write(chunk)
                         received += len(chunk)
 
-                print(f"[SAVED] '{filename}' uploaded successfully.")
+                type_effect.type_print(f"[SAVED] '{filename}' uploaded successfully.")
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
 
             # ---------- DOWNLOAD ----------
@@ -136,7 +136,7 @@ def handle_client(conn: socket.socket, addr):
                     while chunk := f.read(SIZE):
                         conn.send(chunk)
 
-                print(f"[SENT] '{filename}' sent to {addr}")
+                type_effect.type_print(f"[SENT] '{filename}' sent to {addr}")
 
             # ---------- DELETE ----------
             elif cmd == "DELETE":
@@ -149,7 +149,7 @@ def handle_client(conn: socket.socket, addr):
                 if os.path.exists(filepath):
                     os.remove(filepath)
                     conn.send(f"OK@File '{filename}' deleted successfully.".encode(FORMAT))
-                    print(f"[DELETE] '{filename}' removed by {addr}")
+                    type_effect.type_print(f"[DELETE] '{filename}' removed by {addr}")
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
@@ -158,21 +158,21 @@ def handle_client(conn: socket.socket, addr):
                 conn.send("ERR@Unknown command".encode(FORMAT))
 
         except Exception as e:
-            print(f"[ERROR] {addr}: {e}")
+            type_effect.type_print(f"[ERROR] {addr}: {e}")
             break
 
-    print(f"[DISCONNECTED] {addr} disconnected.")
+    type_effect.type_print(f"[DISCONNECTED] {addr} disconnected.")
     conn.close()
 
 
 # ----------------------------------------------------------------------
 def main():
-    print("Starting the server...")
+    type_effect.type_print("Starting the server...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(ADDR)
     server.listen()
-    print(f"Server is listening on {IP}:{PORT}")
+    type_effect.type_print(f"Server is listening on {IP}:{PORT}")
 
     while True:
         conn, addr = server.accept()
