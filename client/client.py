@@ -62,7 +62,8 @@ def main():
         # --- Handle UPLOAD ---
         elif cmd == "UPLOAD":
             if len(parts) < 2:
-                print("⚠️ Usage: UPLOAD <filename>")
+                print("No file name indicated")
+                client.send(cmd.encode(FORMAT))
                 continue
 
             filename = parts[1]
@@ -104,6 +105,11 @@ def main():
             client.send(cmd.encode(FORMAT))
 
         elif cmd == "DOWNLOAD":
+            if (len(parts) < 2):
+                print("No file specified")
+                client.send(cmd.encode(FORMAT))
+                continue
+            
             filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
@@ -118,11 +124,18 @@ def main():
                             f.write(data)
                             break
                         f.write(data)
+                        client.send(cmd.encode(FORMAT))
                 print(f"Downloaded '{filename}' successfully!")
+            client.send(cmd.encode(FORMAT))
+            continue
 
 
 
         elif cmd == "DELETE":
+            if (len(parts) < 2):
+                print("No file specified")
+                client.send(cmd.encode(FORMAT))
+                continue
             filename = parts[1]
             client.send(cmd.encode(FORMAT))
             client.send(filename.encode(FORMAT))
@@ -134,6 +147,9 @@ def main():
                 print("❌ File not found on server.")
         else:
             print("Command not found")
+            client.send(cmd.encode(FORMAT))
+            continue
+        
 
 
     print("Disconnected from the server.")
