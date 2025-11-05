@@ -111,22 +111,20 @@ def handle_client(conn, addr):
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
-            elif cmd == 'DELETE':
+            elif cmd == "DELETE":
                 filename = conn.recv(1024).decode(FORMAT)
                 filepath = os.path.join(SERVER_PATH, filename)
 
                 if os.path.exists(filepath):
-                    conn.send("OK".encode(FORMAT))
-                    os.remove(f"{filename}")
-                    conn.sendall(data)
-                    conn.send(b"<END>")
-
+                    os.remove(filepath)
+                    conn.send("OK@File sucessfully deleted!".encode(FORMAT))
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
 
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
+                continue
 
 
         except Exception as e:
