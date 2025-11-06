@@ -1,7 +1,7 @@
 import os
 import socket
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+#sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import type_effect
 
 IP = "25.40.106.181"      # <-- change to your server's IP if needed
@@ -9,7 +9,6 @@ PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
-
 
 def recv_exact(conn: socket.socket, nbytes: int) -> bytes:
     """Receive exactly *nbytes* from the socket."""

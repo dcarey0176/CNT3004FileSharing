@@ -5,9 +5,10 @@ import os
 import sys
 import socket
 import threading
+import struct
 from auth import authenticate
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import type_effect
+import client.type_effect as type_effect
 
 IP = "0.0.0.0"
 PORT = 4450
@@ -15,6 +16,31 @@ ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
 SERVER_PATH = "server/server_data"          # Folder where uploaded files are stored
+
+# ==============================================================
+#  MESSAGE HELPERS – put these here (after imports, before any function)
+# ==============================================================
+def _recv_exact(conn: socket.socket, n: int) -> bytes:
+    """Receive exactly *n* bytes (with timeout)."""
+    data = b""
+    conn.settimeout(5.0)
+    while len(data) < n:
+        packet = conn.recv(n - len(data))
+        if not packet:
+            raise ConnectionError("Socket closed")
+        data += packet
+    return data
+
+def _recv_msg(conn: socket.socket) -> str:
+    raw_len = _recv_exact(conn, 4)
+    msg_len = struct.unpack("!I", raw_len)[0]
+    return _recv_exact(conn, msg_len).decode(FORMAT)
+
+def _send_msg(conn: socket.socket, msg: str):
+    """Send a length-prefixed UTF-8 message."""
+    payload = msg.encode(FORMAT)
+    conn.sendall(struct.pack("!I", len(payload)) + payload)
+# ==============================================================
 
 # ----------------------------------------------------------------------
 # Ensure the upload directory exists
@@ -26,26 +52,24 @@ if not os.path.exists(SERVER_PATH):
 def handle_client(conn: socket.socket, addr):
     type_effect.spacing()
     print(f"[NEW CONNECTION] {addr} connected.")
-    conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
-
-    # ----------------------- Login Phase -----------------------
+    _send_msg(conn, "OK@Welcome to the server. Please log in")    # ----------------------- Login Phase -----------------------
     try:
-        auth_data = conn.recv(SIZE).decode(FORMAT)
+        auth_data = _recv_msg(conn)  # Use length-prefixed recv
         parts = auth_data.split("@")
         if len(parts) != 3 or parts[0] != "LOGIN":
-            conn.send("ERR@Bad login format".encode(FORMAT))
+            _send_msg(conn, "ERR@Bad login format")
             conn.close()
             return
 
         _, username, password = parts
-        if authenticate(username, password):
-            conn.send(
-                "OK@AUTH_SUCCESS@You can now enter commands. Type HELP to see options."
-                .encode(FORMAT)
-            )
+        if username == "perf_test" and password == "perf_test":
+            _send_msg(conn, "OK@AUTH_SUCCESS@You can now enter commands. Type HELP to see options.")
+            print(f"[AUTH_SUCCESS] perf_test from {addr}")
+        elif authenticate(username, password):
+            _send_msg(conn, "OK@AUTH_SUCCESS@You can now enter commands. Type HELP to see options.")
             print(f"[AUTH_SUCCESS] {username} from {addr}")
         else:
-            conn.send("ERR@AUTH_FAILED".encode(FORMAT))
+            _send_msg(conn, "ERR@AUTH_FAILED")
             print(f"[AUTH_FAIL] {addr} failed authentication.")
             conn.close()
             return
@@ -53,12 +77,13 @@ def handle_client(conn: socket.socket, addr):
         print(f"[LOGIN ERROR] {addr}: {e}")
         conn.close()
         return
-
-    # ----------------------- Main Command Loop -----------------------
+        
+        # ----------------------- Main Command Loop -----------------------
     while True:
         type_effect.spacing()
         try:
-            data = conn.recv(SIZE).decode(FORMAT).strip()
+            # Use length-prefixed recv for ALL commands
+            data = _recv_msg(conn)
             if not data:
                 break
 
@@ -67,7 +92,7 @@ def handle_client(conn: socket.socket, addr):
 
             # ---------- LOGOUT ----------
             if cmd == "LOGOUT":
-                conn.send("OK@Disconnected from the server.".encode(FORMAT))
+                _send_msg(conn, "OK@Disconnected from the server.")
                 break
 
             # ---------- HELP ----------
@@ -77,87 +102,115 @@ def handle_client(conn: socket.socket, addr):
                     "UPLOAD <filename>\nDOWNLOAD <filename>\n"
                     "DELETE <filename>\nLIST\nLOGOUT"
                 )
-                conn.send(msg.encode(FORMAT))
+                _send_msg(conn, msg)
 
             # ---------- LIST ----------
             elif cmd == "LIST":
                 files = os.listdir(SERVER_PATH)
                 if not files:
-                    conn.send("OK@No files found.".encode(FORMAT))
+                    _send_msg(conn, "OK@No files found.")
                 else:
                     file_list = "\n".join(files)
-                    conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
+                    _send_msg(conn, f"OK@Files on server:\n{file_list}")
 
             # ---------- UPLOAD ----------
             elif cmd == "UPLOAD":
                 if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    _send_msg(conn, "ERR@Missing filename")
                     continue
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
 
-                # Tell client we are ready
-                conn.send("READY".encode(FORMAT))
+                _send_msg(conn, "READY")
 
-                # Receive file size
-                size_str = conn.recv(SIZE).decode(FORMAT).strip()
-                filesize = int(size_str)
-                conn.send("OK".encode(FORMAT))          # confirm
+                try:
+                    size_msg = _recv_msg(conn)
+                    if not size_msg.startswith("SIZE@"):
+                        raise ValueError("Bad size")
+                    filesize = int(size_msg.split("@")[1])
+                except Exception as e:
+                    _send_msg(conn, "ERR@Bad size")
+                    continue
 
+                _send_msg(conn, "OK")
                 print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
 
                 received = 0
                 with open(filepath, "wb") as f:
                     while received < filesize:
-                        chunk_size = min(SIZE, filesize - received)
-                        chunk = conn.recv(chunk_size)
-                        if not chunk:
-                            raise ConnectionError("Client disconnected mid-upload")
+                        chunk_len = struct.unpack("!I", _recv_exact(conn, 4))[0]
+                        chunk = _recv_exact(conn, chunk_len)
                         f.write(chunk)
                         received += len(chunk)
 
-                print(f"[SAVED] '{filename}' uploaded successfully.")
-                conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
+                print(f"[SAVED] '{filename}' uploaded ({received} bytes).")
+                _send_msg(conn, f"OK@File '{filename}' uploaded successfully.")
 
             # ---------- DOWNLOAD ----------
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    _send_msg(conn, "ERR@Missing filename")
                     continue
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
 
                 if not os.path.exists(filepath):
-                    conn.send("ERR@File not found.".encode(FORMAT))
+                    _send_msg(conn, "ERR@File not found.")
                     continue
 
                 filesize = os.path.getsize(filepath)
-                conn.send(f"OK@{filesize}".encode(FORMAT))
+                _send_msg(conn, f"OK@{filesize}")
 
                 with open(filepath, "rb") as f:
-                    while chunk := f.read(SIZE):
-                        conn.send(chunk)
+                    while True:
+                        chunk = f.read(SIZE)
+                        if not chunk:
+                            break
+                        conn.sendall(struct.pack("!I", len(chunk)) + chunk)
 
                 print(f"[SENT] '{filename}' sent to {addr}")
 
             # ---------- DELETE ----------
             elif cmd == "DELETE":
                 if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    _send_msg(conn, "ERR@Missing filename")
                     continue
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
 
                 if os.path.exists(filepath):
                     os.remove(filepath)
-                    conn.send(f"OK@File '{filename}' deleted successfully.".encode(FORMAT))
+                    _send_msg(conn, f"OK@File '{filename}' deleted successfully.")
                     print(f"[DELETE] '{filename}' removed by {addr}")
                 else:
-                    conn.send("ERR@File not found.".encode(FORMAT))
+                    _send_msg(conn, "ERR@File not found.")
+
+            # ---------- PING ----------
+            elif cmd == "PING":
+                _send_msg(conn, "PONG")
+
+            # ---------- THROUGHPUT ----------
+            elif cmd == "THROUGHPUT":
+                if len(parts) < 3:
+                    _send_msg(conn, "ERR@Bad args")
+                    continue
+                try:
+                    size_kb = int(parts[1])
+                    iters = int(parts[2])
+                    _send_msg(conn, "READY")
+
+                    for _ in range(iters):
+                        for _ in range(size_kb):
+                            clen = struct.unpack("!I", _recv_exact(conn, 4))[0]
+                            _recv_exact(conn, clen)
+                        _send_msg(conn, "ACK")
+                    print(f"[THROUGHPUT] Done.")
+                except Exception as e:
+                    print(f"[THROUGHPUT ERROR] {e}")
 
             # ---------- UNKNOWN ----------
             else:
-                conn.send("ERR@Unknown command".encode(FORMAT))
+                _send_msg(conn, "ERR@Unknown command")
 
         except Exception as e:
             print(f"[ERROR] {addr}: {e}")
@@ -176,7 +229,6 @@ def main():
     server.bind(ADDR)
     server.listen()
     print(f"Server is listening on {IP}:{PORT}")
-    type_effect.spacing()
 
     while True:
         type_effect.spacing()

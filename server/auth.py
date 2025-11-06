@@ -14,7 +14,4 @@ def load_users():
 def authenticate(username: str, password: str) -> bool:
     users = load_users()
     hashed_pw = hash_password(password)
-    print(f" Username entered: {username}")
-    print(f" Password entered (hashed): {hashed_pw}")
-    print(f" Users loaded: {users}")
     return username in users and users[username] == hashed_pw
