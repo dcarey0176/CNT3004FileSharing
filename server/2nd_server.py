@@ -176,7 +176,7 @@ def main():
     server.bind(ADDR)
     server.listen()
     print(f"Server is listening on {IP}:{PORT}")
-    type_effect.spacing()
+    
 
     while True:
         type_effect.spacing()
