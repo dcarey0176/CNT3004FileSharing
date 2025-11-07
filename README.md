@@ -7,37 +7,22 @@ This project implements a multithreaded, socket-based file sharing system using 
 ```bash
 CNT3004_FileSharing/
 ├── server/
-│ ├── server.py # Main server file 
+│ ├── server.py # Main server file
+│ ├── server_data/
 │ ├── init.py
 │ ├── auth.py
 │ ├── users.json
 │ ├── utils/
 │ │ └── init.py
 │ │ 
-│ └── storage/
 │ └── (server-side files saved here)
 │
 ├── client/ 
 │ ├── client.py
-│ ├── init.py
-│ └── downloads/
+│ └── init.py
 │ 
-│
-├── analysis/
-│ ├── results/ 
-│ ├── init.py
-│ └── performance_test.py # Measure file transfer or response times
-│
-├── docs/
-│ ├── diagrams/
-│ │ └── architecture.png # Diagram showing server-client interaction
-│ └── presentation/
-│   └── report.pdf # Written report / explanation of design
-│
 ├── tests/
-│ ├── test_analysis.py
-│ ├── test_server.py
-│ └── test_client.py
+│ └── test_analysis.py
 │
 ├── .gitignore
 ├── README.md
