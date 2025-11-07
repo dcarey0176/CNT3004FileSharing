@@ -1,24 +1,14 @@
 import os
 import socket
 import sys
-#sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import type_effect
 
 IP = "25.40.106.181"      # <-- change to your server's IP if needed
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
+CHUNK_SIZE = 65536  # 64KB chunks to match server
 FORMAT = "utf-8"
-
-def recv_exact(conn: socket.socket, nbytes: int) -> bytes:
-    """Receive exactly *nbytes* from the socket."""
-    data = b""
-    while len(data) < nbytes:
-        packet = conn.recv(nbytes - len(data))
-        if not packet:
-            raise ConnectionError("Socket closed while receiving")
-        data += packet
-    return data
 
 
 def receive_response(conn: socket.socket):
@@ -29,7 +19,7 @@ def receive_response(conn: socket.socket):
         return "Failed to receive response."
 
 
-# ----------------------- Upload -----------------------
+# ----------------------- Upload (OPTIMIZED) -----------------------
 def handle_upload(conn: socket.socket, filename: str):
     if not os.path.exists(filename):
         type_effect.type_print("File does not exist.")
@@ -47,14 +37,15 @@ def handle_upload(conn: socket.socket, filename: str):
         type_effect.type_print("Server rejected file size.")
         return
 
+    # Send file in 64KB chunks for speed
     with open(filename, "rb") as f:
-        while chunk := f.read(SIZE):
-            conn.send(chunk)
+        while chunk := f.read(CHUNK_SIZE):
+            conn.sendall(chunk)
 
     type_effect.type_print(receive_response(conn))
 
 
-# ----------------------- Download -----------------------
+# ----------------------- Download (OPTIMIZED) -----------------------
 def handle_download(conn: socket.socket, filename: str):
     conn.send(f"DOWNLOAD@{filename}".encode(FORMAT))
     resp = receive_response(conn)
@@ -74,13 +65,19 @@ def handle_download(conn: socket.socket, filename: str):
         type_effect.type_print("Invalid file size received.")
         return
 
+    # Send READY acknowledgment
+    conn.send("READY".encode(FORMAT))
+
+    # Receive file in 64KB chunks for speed
     received = 0
     with open(filename, "wb") as f:
         while received < filesize:
-            chunk_size = min(SIZE, filesize - received)
-            data = recv_exact(conn, chunk_size)
-            f.write(data)
-            received += len(data)
+            chunk_size = min(CHUNK_SIZE, filesize - received)
+            chunk = conn.recv(chunk_size)
+            if not chunk:
+                raise ConnectionError("Connection lost during download")
+            f.write(chunk)
+            received += len(chunk)
 
     type_effect.type_print(f"Downloaded '{filename}' successfully!")
 
@@ -94,6 +91,12 @@ def handle_delete(conn: socket.socket, filename: str):
 # ----------------------- Main -----------------------
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    # Optimize socket BEFORE connecting
+    client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's algorithm
+    client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)  # 64KB receive buffer
+    client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)  # 64KB send buffer
+    
     client.connect(ADDR)
 
     # ----- Welcome -----
@@ -138,9 +141,6 @@ def main():
             break
 
         elif cmd == "UPLOAD":
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
-            client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
             if len(parts) < 2:
                 type_effect.type_print("Usage: UPLOAD <filename>")
                 continue

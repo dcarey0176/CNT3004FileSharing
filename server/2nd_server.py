@@ -10,7 +10,8 @@ IP = "0.0.0.0"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
-CHUNK_SIZE = 1000000
+CHUNK_SIZE = 65536  # 64KB chunks for optimal performance (TCP window size)
+SOCKET_BUFFER_SIZE = 65536  # Match chunk size for efficiency
 FORMAT = "utf-8"
 SERVER_PATH = "server\server_data"          # Folder where uploaded files are stored
 
@@ -23,6 +24,12 @@ if not os.path.exists(SERVER_PATH):
 
 def handle_client(conn: socket.socket, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
+    
+    # Optimize socket for faster transfers
+    conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's algorithm
+    conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_BUFFER_SIZE)  # Send buffer
+    conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_BUFFER_SIZE)  # Receive buffer
+    
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
     # ----------------------- Login Phase -----------------------
@@ -84,7 +91,7 @@ def handle_client(conn: socket.socket, addr):
                     file_list = "\n".join(files)
                     conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
 
-            # ---------- UPLOAD ----------
+            # ---------- UPLOAD (OPTIMIZED) ----------
             elif cmd == "UPLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -105,7 +112,7 @@ def handle_client(conn: socket.socket, addr):
                 received = 0
                 with open(filepath, "wb") as f:
                     while received < filesize:
-                        chunk_size = min(SIZE, filesize - received)
+                        chunk_size = min(CHUNK_SIZE, filesize - received)
                         chunk = conn.recv(chunk_size)
                         if not chunk:
                             raise ConnectionError("Client disconnected mid-upload")
@@ -115,9 +122,7 @@ def handle_client(conn: socket.socket, addr):
                 print(f"[SAVED] '{filename}' uploaded successfully.")
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
 
-            # ---------- DOWNLOAD ----------
-            
-            # ---------- DOWNLOAD (IMPROVED FOR LARGE FILES) ----------
+            # ---------- DOWNLOAD (OPTIMIZED FOR SPEED) ----------
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -144,20 +149,19 @@ def handle_client(conn: socket.socket, addr):
                 sent = 0
                 with open(filepath, "rb") as f:
                     while sent < filesize:
-                        # Read chunk from file
-                        chunk = f.read(CHUNK_SIZE)
+                        # Read larger chunk from file
+                        remaining = filesize - sent
+                        chunk_size = min(CHUNK_SIZE, remaining)
+                        chunk = f.read(chunk_size)
+                        
                         if not chunk:
                             break
                         
-                        # Send chunk
+                        # Send entire chunk (sendall ensures complete transmission)
                         conn.sendall(chunk)
                         sent += len(chunk)
-                        
-                        # Optional: Print progress for very large files
-                        if filesize > 1024 * 1024:  # > 1MB
-                            progress = (sent / filesize) * 100
-                            if sent % (CHUNK_SIZE * 100) == 0 or sent == filesize:
-                                print(f"[PROGRESS] {filename}: {progress:.1f}% ({sent}/{filesize} bytes)")
+
+                print(f"[SENT] '{filename}' sent successfully to {addr} ({sent} bytes)")
                 
             # ---------- DELETE ----------
             elif cmd == "DELETE":
