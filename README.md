@@ -13,9 +13,7 @@ CNT3004_FileSharing/
 │ ├── auth.py
 │ ├── users.json
 │ ├── utils/
-│ │ └── init.py
-│ │ 
-│ └── (server-side files saved here)
+│ └── init.py
 │
 ├── client/ 
 │ ├── client.py
