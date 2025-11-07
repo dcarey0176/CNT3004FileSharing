@@ -138,6 +138,9 @@ def main():
             break
 
         elif cmd == "UPLOAD":
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
+            client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
             if len(parts) < 2:
                 type_effect.type_print("Usage: UPLOAD <filename>")
                 continue
