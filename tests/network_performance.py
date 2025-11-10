@@ -10,9 +10,7 @@ SERVER_PORT = 4450
 FORMAT = "utf-8"
 SIZE = 1024
 
-# ------------------------------------------------------------------
-# Length-prefixed helpers (used for PING, THROUGHPUT, LOGOUT)
-# ------------------------------------------------------------------
+
 def _send_msg(conn: socket.socket, msg: str):
     payload = msg.encode(FORMAT)
     conn.sendall(struct.pack("!I", len(payload)) + payload)
@@ -34,9 +32,7 @@ def _recv_msg(conn: socket.socket) -> str:
         data += chunk
     return data.decode(FORMAT)
 
-# ------------------------------------------------------------------
-# 1. Latency (PING / PONG)
-# ------------------------------------------------------------------
+
 def measure_latency(conn, num_pings: int = 50):
     latencies = []
     for i in range(1, num_pings + 1):
@@ -54,9 +50,7 @@ def measure_latency(conn, num_pings: int = 50):
             latencies.append(None)
     return latencies
 
-# ------------------------------------------------------------------
-# 2. Throughput
-# ------------------------------------------------------------------
+
 def measure_throughput(conn, size_kb: int = 100, iterations: int = 20):
     chunk = b"x" * 1024
     total_kb = size_kb * iterations
@@ -84,17 +78,13 @@ def measure_throughput(conn, size_kb: int = 100, iterations: int = 20):
     mbps = total_bytes / (1_048_576 * duration) if duration > 0 else 0
     return mbps
 
-# ------------------------------------------------------------------
-# 3. Stats
-# ------------------------------------------------------------------
+
 def calculate_packet_loss(latencies):
     sent = len(latencies)
     received = sum(1 for l in latencies if l is not None)
     return ((sent - received) / sent) * 100 if sent else 0
 
-# ------------------------------------------------------------------
-# 4. Main
-# ------------------------------------------------------------------
+
 def main():
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     conn.settimeout(12.0)
@@ -108,14 +98,13 @@ def main():
         print(f"Connection failed: {e}")
         return
 
-    # WELCOME (raw)
+    
     try:
         welcome = conn.recv(SIZE).decode(FORMAT).strip()
         print(f"[SERVER WELCOME] {welcome}")
     except Exception as e:
         print(f"[WARNING] No welcome: {e}")
 
-    # LOGIN (raw send + raw recv)
     try:
         conn.sendall("LOGIN@perf_test@perf_test".encode(FORMAT))
         login_resp = conn.recv(SIZE).decode(FORMAT).strip()
@@ -130,11 +119,11 @@ def main():
         conn.close()
         return
 
-    # LATENCY
+    # Latency
     print("=== LATENCY TEST (50 pings) ===")
     latencies = measure_latency(conn, num_pings=50)
 
-    # THROUGHPUT
+    # Throughput
     print("\n=== THROUGHPUT TEST ===")
     try:
         throughput = measure_throughput(conn, size_kb=100, iterations=20)
@@ -142,7 +131,7 @@ def main():
         print(f"Throughput failed: {e}")
         throughput = 0.0
 
-    # LOGOUT
+    # Logout
     try:
         _send_msg(conn, "LOGOUT")
         _recv_msg(conn)
@@ -150,7 +139,7 @@ def main():
         pass
     conn.close()
 
-    # RESULTS
+    # Results
     valid = [l for l in latencies if l is not None]
     avg_latency = sum(valid) / len(valid) if valid else float('inf')
     packet_loss = calculate_packet_loss(latencies)
@@ -164,7 +153,7 @@ def main():
     print(f"Successful pings: {len(valid)} / {len(latencies)}")
     print("="*60)
 
-    # PLOT
+    # Table
     if valid:
         plt.figure(figsize=(10, 5))
         idx = np.arange(len(latencies))
