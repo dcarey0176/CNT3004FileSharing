@@ -20,6 +20,10 @@ CNT3004_FileSharing/
 │ └── init.py
 │ 
 ├── tests/
+│ ├── Client.py
+│ ├── auth.py
+│ ├── auth.py
+│ ├── Server.py
 │ └── test_analysis.py
 │
 ├── .gitignore
