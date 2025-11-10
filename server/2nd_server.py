@@ -10,14 +10,12 @@ IP = "0.0.0.0"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
-CHUNK_SIZE = 65536  # 64KB chunks for optimal performance (TCP window size)
-SOCKET_BUFFER_SIZE = 65536  # Match chunk size for efficiency
+CHUNK_SIZE = 65536  # 64KB chunks 
+SOCKET_BUFFER_SIZE = 65536  
 FORMAT = "utf-8"
-SERVER_PATH = "server\server_data"          # Folder where uploaded files are stored
+SERVER_PATH = "server\server_data"          
 
-# ----------------------------------------------------------------------
-# Ensure the upload directory exists
-# ----------------------------------------------------------------------
+
 if not os.path.exists(SERVER_PATH):
     os.makedirs(SERVER_PATH)
 
@@ -25,14 +23,13 @@ if not os.path.exists(SERVER_PATH):
 def handle_client(conn: socket.socket, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
     
-    # Optimize socket for faster transfers
     conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's algorithm
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_BUFFER_SIZE)  # Send buffer
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_BUFFER_SIZE)  # Receive buffer
     
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
-    # ----------------------- Login Phase -----------------------
+    # Login
     try:
         auth_data = conn.recv(SIZE).decode(FORMAT)
         parts = auth_data.split("@")
@@ -58,7 +55,7 @@ def handle_client(conn: socket.socket, addr):
         conn.close()
         return
 
-    # ----------------------- Main Command Loop -----------------------
+   
     while True:
         try:
             data = conn.recv(SIZE).decode(FORMAT).strip()
@@ -68,12 +65,10 @@ def handle_client(conn: socket.socket, addr):
             parts = data.split("@")
             cmd = parts[0].upper()
 
-            # ---------- LOGOUT ----------
             if cmd == "LOGOUT":
                 conn.send("OK@Disconnected from the server.".encode(FORMAT))
                 break
 
-            # ---------- HELP ----------
             elif cmd == "HELP":
                 msg = (
                     "OK@Available commands:\n"
@@ -82,7 +77,6 @@ def handle_client(conn: socket.socket, addr):
                 )
                 conn.send(msg.encode(FORMAT))
 
-            # ---------- LIST ----------
             elif cmd == "LIST":
                 files = os.listdir(SERVER_PATH)
                 if not files:
@@ -91,7 +85,6 @@ def handle_client(conn: socket.socket, addr):
                     file_list = "\n".join(files)
                     conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
 
-            # ---------- UPLOAD (OPTIMIZED) ----------
             elif cmd == "UPLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -122,7 +115,7 @@ def handle_client(conn: socket.socket, addr):
                 print(f"[SAVED] '{filename}' uploaded successfully.")
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
 
-            # ---------- DOWNLOAD (OPTIMIZED FOR SPEED) ----------
+            # download
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -149,7 +142,6 @@ def handle_client(conn: socket.socket, addr):
                 sent = 0
                 with open(filepath, "rb") as f:
                     while sent < filesize:
-                        # Read larger chunk from file
                         remaining = filesize - sent
                         chunk_size = min(CHUNK_SIZE, remaining)
                         chunk = f.read(chunk_size)
@@ -157,13 +149,13 @@ def handle_client(conn: socket.socket, addr):
                         if not chunk:
                             break
                         
-                        # Send entire chunk (sendall ensures complete transmission)
+                        # Send entire chunk
                         conn.sendall(chunk)
                         sent += len(chunk)
 
                 print(f"[SENT] '{filename}' sent successfully to {addr} ({sent} bytes)")
                 
-            # ---------- DELETE ----------
+            #Delete
             elif cmd == "DELETE":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -178,7 +170,7 @@ def handle_client(conn: socket.socket, addr):
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
-            # ---------- UNKNOWN ----------
+            #Error handling
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
 
@@ -190,7 +182,6 @@ def handle_client(conn: socket.socket, addr):
     conn.close()
 
 
-# ----------------------------------------------------------------------
 def main():
     print("Starting the server...")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
