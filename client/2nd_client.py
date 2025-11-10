@@ -3,23 +3,22 @@ import socket
 import sys
 import type_effect
 
-IP = "25.40.106.181"      # <-- change to your server's IP if needed
+IP = "25.40.106.181"      
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
-CHUNK_SIZE = 65536  # 64KB chunks to match server
+CHUNK_SIZE = 65536  # 64KB chunks
 FORMAT = "utf-8"
 
 
 def receive_response(conn: socket.socket):
-    """Receive a text response (expects a single UTF-8 message <= SIZE)."""
     try:
         return conn.recv(SIZE).decode(FORMAT).strip()
     except Exception:
         return "Failed to receive response."
 
 
-# ----------------------- Upload (OPTIMIZED) -----------------------
+#upload
 def handle_upload(conn: socket.socket, filename: str):
     if not os.path.exists(filename):
         type_effect.type_print("File does not exist.")
@@ -37,7 +36,7 @@ def handle_upload(conn: socket.socket, filename: str):
         type_effect.type_print("Server rejected file size.")
         return
 
-    # Send file in 64KB chunks for speed
+    #sends chunks for faster rate
     with open(filename, "rb") as f:
         while chunk := f.read(CHUNK_SIZE):
             conn.sendall(chunk)
@@ -45,7 +44,7 @@ def handle_upload(conn: socket.socket, filename: str):
     type_effect.type_print(receive_response(conn))
 
 
-# ----------------------- Download (OPTIMIZED) -----------------------
+#Download
 def handle_download(conn: socket.socket, filename: str):
     conn.send(f"DOWNLOAD@{filename}".encode(FORMAT))
     resp = receive_response(conn)
@@ -54,7 +53,6 @@ def handle_download(conn: socket.socket, filename: str):
         type_effect.type_print(resp)
         return
 
-    # OK@<size>
     parts = resp.split("@", 2)
     if len(parts) < 2:
         type_effect.type_print("Malformed size response from server.")
@@ -65,10 +63,8 @@ def handle_download(conn: socket.socket, filename: str):
         type_effect.type_print("Invalid file size received.")
         return
 
-    # Send READY acknowledgment
     conn.send("READY".encode(FORMAT))
 
-    # Receive file in 64KB chunks for speed
     received = 0
     with open(filename, "wb") as f:
         while received < filesize:
@@ -82,13 +78,12 @@ def handle_download(conn: socket.socket, filename: str):
     type_effect.type_print(f"Downloaded '{filename}' successfully!")
 
 
-# ----------------------- Delete -----------------------
+#Delete
 def handle_delete(conn: socket.socket, filename: str):
     conn.send(f"DELETE@{filename}".encode(FORMAT))
     type_effect.type_print(receive_response(conn))
 
 
-# ----------------------- Main -----------------------
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
@@ -99,13 +94,13 @@ def main():
     
     client.connect(ADDR)
 
-    # ----- Welcome -----
+    #Greeting
     welcome = client.recv(SIZE).decode(FORMAT)
     cmd, msg = welcome.split("@", 1)
     if cmd == "OK":
         type_effect.type_print(msg)
 
-    # ----- Login -----
+    #Login
     username = input("Username: ")
     password = input("Password: ")
     client.send(f"LOGIN@{username}@{password}".encode(FORMAT))
@@ -122,7 +117,7 @@ def main():
     if len(parts) > 2:
         type_effect.type_print("@".join(parts[2:]))      # any extra welcome text
 
-    # ----- Command Loop -----
+    #Commands
     while True:
         cmd_line = input("> ").strip()
         type_effect.spacing()
