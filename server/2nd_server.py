@@ -149,11 +149,11 @@ def handle_client(conn: socket.socket, addr):
                 msg = (
                     "OK@Available commands:\n"
                     "UPLOAD <filename>\nDOWNLOAD <filename>\n"
-                    "DELETE <filename>\nLIST\nLOGOUT"
+                    "DELETE <filename>\nDIR\nLOGOUT"
                 )
                 conn.send(msg.encode(FORMAT))
 
-            elif cmd == "LIST":
+            elif cmd == "DIR":
                 files = os.listdir(SERVER_PATH)
                 if not files:
                     conn.send("OK@No files found.".encode(FORMAT))
