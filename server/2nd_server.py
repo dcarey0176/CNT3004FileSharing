@@ -23,7 +23,7 @@ if not os.path.exists(SERVER_PATH):
 def handle_client(conn: socket.socket, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
     
-    conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's algorithm
+    conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_BUFFER_SIZE)  # Send buffer
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_BUFFER_SIZE)  # Receive buffer
     

@@ -12,7 +12,7 @@ def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
 
-    # --- Login process ---
+    #login
     data = client.recv(SIZE).decode(FORMAT)
     cmd, msg = data.split("@")
     if cmd == "OK":
@@ -47,25 +47,25 @@ def main():
         parts = data.split(" ")
         cmd = parts[0].upper()
 
-        # --- Handle HELP ---
+        #Help
         if cmd == "HELP":
             client.send(cmd.encode(FORMAT))
 
-        # --- Handle LOGOUT ---
+        #Logout
         elif cmd == "LOGOUT":
             client.send(cmd.encode(FORMAT))
             break
 
-        # --- Handle UPLOAD ---
+        #Upload
         elif cmd == "UPLOAD":
             if len(parts) < 2:
-                print("⚠️ Usage: UPLOAD <filename>")
+                print(" Usage: UPLOAD <filename>")
                 continue
 
             filename = parts[1]
 
             if not os.path.exists(filename):
-                print("❌ File does not exist.")
+                print(" File does not exist.")
                 continue
 
             # Send upload command to server
@@ -92,7 +92,7 @@ def main():
                     data = f.read(SIZE)
 
             client.send(b"<END>")  # Mark end of file
-            print(f"📤 Uploaded '{filename}' successfully.")
+            print(f" Uploaded '{filename}' successfully.")
         elif cmd == "LIST":
             client.send(cmd.encode(FORMAT))
             
@@ -114,7 +114,7 @@ def main():
                 print(f"Downloaded '{filename}' successfully!")
        
         else:
-            print("❌ Unknown command. Try HELP")
+            print(" Unknown command. Try HELP")
 
     print("Disconnected from the server.")
     client.close()
