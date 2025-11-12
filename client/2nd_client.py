@@ -3,7 +3,7 @@ import socket
 import sys
 import type_effect
 
-IP = "25.40.106.181"      
+IP = "172.20.10.2"      
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
@@ -19,12 +19,15 @@ def receive_response(conn: socket.socket):
 
 
 #upload
-def handle_upload(conn: socket.socket, filename: str):
+def handle_upload(conn: socket.socket, filename: str, sub=None):
     if not os.path.exists(filename):
         type_effect.type_print("File does not exist.")
         return
-
-    conn.send(f"UPLOAD@{filename}".encode(FORMAT))
+    base_name = os.path.basename(filename)
+    if sub:
+        conn.send(f"UPLOAD@(base_name)@{sub}".encode(FORMAT))
+    else:
+        conn.send(f"UPLOAD@{base_name}".encode(FORMAT))
 
     if receive_response(conn) != "READY":
         type_effect.type_print("Server not ready for upload.")

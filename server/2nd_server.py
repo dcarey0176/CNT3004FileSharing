@@ -15,14 +15,9 @@ SIZE = 1024
 CHUNK_SIZE = 65536  # 64KB chunks 
 SOCKET_BUFFER_SIZE = 65536  
 FORMAT = "utf-8"
-SERVER_PATH = "server\server_data"          
+SERVER_PATH = "server_data"          
 
-if not os.path.exists(SERVER_PATH):
-    os.makedirs(SERVER_PATH)
 
-# ----------------------------------------------------------------
-# Helper functions for length-prefixed messages (for THROUGHPUT)
-# ----------------------------------------------------------------
 def recv_length_prefixed(conn: socket.socket) -> bytes:
     """Receive length-prefixed data (4-byte length header + data)"""
     # Receive 4-byte length header
@@ -167,6 +162,8 @@ def handle_client(conn: socket.socket, addr):
                     continue
                 filename = parts[1]
                 filepath = os.path.join(SERVER_PATH, filename)
+            elif cmd == "SUBFOLDER":
+                os.makedirs()
 
                 # Tell client we are ready
                 conn.send("READY".encode(FORMAT))
