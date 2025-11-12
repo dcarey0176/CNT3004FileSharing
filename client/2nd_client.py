@@ -3,7 +3,7 @@ import socket
 import sys
 import type_effect
 
-IP = "25.40.106.181"      
+IP = "25.40.106.181"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
@@ -19,29 +19,41 @@ def receive_response(conn: socket.socket):
 
 
 #upload
-def handle_upload(conn: socket.socket, filename: str):
+def handle_upload(conn: socket.socket, filename: str, sub: str = None):
     if not os.path.exists(filename):
         type_effect.type_print("File does not exist.")
         return
 
-    conn.send(f"UPLOAD@{filename}".encode(FORMAT))
+    # Extract just the file’s base name (no local path)
+    base_name = os.path.basename(filename)
 
+    # Send upload command with optional subfolder
+    if sub:
+        conn.send(f"UPLOAD@{base_name}@{sub}".encode(FORMAT))
+    else:
+        conn.send(f"UPLOAD@{base_name}".encode(FORMAT))
+
+    # Wait for server to confirm readiness
     if receive_response(conn) != "READY":
         type_effect.type_print("Server not ready for upload.")
         return
 
     filesize = os.path.getsize(filename)
     conn.send(str(filesize).encode(FORMAT))
+
     if receive_response(conn) != "OK":
         type_effect.type_print("Server rejected file size.")
         return
 
-    #sends chunks for faster rate
+    # Send file in chunks
     with open(filename, "rb") as f:
         while chunk := f.read(CHUNK_SIZE):
             conn.sendall(chunk)
 
+    # Final server response (e.g., upload complete)
     type_effect.type_print(receive_response(conn))
+
+
 
 
 #Download
@@ -86,12 +98,12 @@ def handle_delete(conn: socket.socket, filename: str):
 
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
+
     # Optimize socket BEFORE connecting
     client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's algorithm
     client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)  # 64KB receive buffer
     client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)  # 64KB send buffer
-    
+
     client.connect(ADDR)
 
     #Greeting
@@ -123,7 +135,7 @@ def main():
         type_effect.spacing()
         if not cmd_line:
             continue
-        parts = cmd_line.split(maxsplit=1)
+        parts = cmd_line.split(maxsplit=2)
         cmd = parts[0].upper()
 
         if cmd == "HELP":
@@ -137,10 +149,13 @@ def main():
 
         elif cmd == "UPLOAD":
             if len(parts) < 2:
-                type_effect.type_print("Usage: UPLOAD <filename>")
+                type_effect.type_print("Usage: UPLOAD <filename> [subfolder]")
                 continue
-            handle_upload(client, parts[1])
-            
+            filename = parts[1]
+            subfolder = parts[2] if len(parts) >= 3 else None
+            handle_upload(client, filename, subfolder)
+
+
         elif cmd == "DOWNLOAD":
             if len(parts) < 2:
                 type_effect.type_print("Usage: DOWNLOAD <filename>")
