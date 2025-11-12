@@ -153,8 +153,8 @@ def main():
                 continue
             handle_delete(client, parts[1])
 
-        elif cmd == "LIST":
-            client.send("LIST".encode(FORMAT))
+        elif cmd == "DIR":
+            client.send("DIR".encode(FORMAT))
             type_effect.type_print(receive_response(client))
 
         else:

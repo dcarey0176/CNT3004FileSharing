@@ -11,12 +11,7 @@ SERVER_PORT = 4450
 FORMAT = "utf-8"
 SIZE = 1024
 
-# ------------------------------------------------------------------
-# Length-prefixed helpers (used for PING, THROUGHPUT, LOGOUT)
-# ------------------------------------------------------------------
-# ------------------------------------------------------------------
-# Simple send/recv helpers (raw, not length-prefixed)
-# ------------------------------------------------------------------
+
 def _send_msg(conn: socket.socket, msg: str):
     conn.sendall(msg.encode(FORMAT))
 

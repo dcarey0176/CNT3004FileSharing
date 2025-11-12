@@ -2,3 +2,7 @@ Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pi
 inf,0.0,100.0,0,50,2025-11-12 14:04:55
 Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pings,Timestamp
 0.1174539998464752,7.686396971325437,0.0,50,50,2025-11-12 14:05:37
+Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pings,Timestamp
+9.094025999074802,2.495397289698968,0.0,50,50,2025-11-12 14:12:07
+Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pings,Timestamp
+9.822475997498259,2.487793016737764,0.0,50,50,2025-11-12 14:12:51
