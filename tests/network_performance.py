@@ -5,7 +5,7 @@ import struct
 import matplotlib.pyplot as plt
 import numpy as np
 
-SERVER_HOST = "25.40.106.181"
+SERVER_HOST = "172.20.10.7"
 SERVER_PORT = 4450
 FORMAT = "utf-8"
 SIZE = 1024
