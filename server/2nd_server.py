@@ -4,6 +4,8 @@
 import os
 import socket
 import threading
+import struct
+import time
 from auth import authenticate
 
 IP = "0.0.0.0"
@@ -13,19 +15,42 @@ SIZE = 1024
 CHUNK_SIZE = 65536  # 64KB chunks 
 SOCKET_BUFFER_SIZE = 65536  
 FORMAT = "utf-8"
-SERVER_PATH = "server_data"          
-
+SERVER_PATH = "server\server_data"          
 
 if not os.path.exists(SERVER_PATH):
     os.makedirs(SERVER_PATH)
 
+# ----------------------------------------------------------------
+# Helper functions for length-prefixed messages (for THROUGHPUT)
+# ----------------------------------------------------------------
+def recv_length_prefixed(conn: socket.socket) -> bytes:
+    """Receive length-prefixed data (4-byte length header + data)"""
+    # Receive 4-byte length header
+    length_data = b""
+    while len(length_data) < 4:
+        chunk = conn.recv(4 - len(length_data))
+        if not chunk:
+            raise ConnectionError("Connection closed while reading length")
+        length_data += chunk
+    
+    length = struct.unpack("!I", length_data)[0]
+    
+    # Receive the actual data
+    data = b""
+    while len(data) < length:
+        chunk = conn.recv(min(CHUNK_SIZE, length - len(data)))
+        if not chunk:
+            raise ConnectionError("Connection closed while reading data")
+        data += chunk
+    
+    return data
 
 def handle_client(conn: socket.socket, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
     
     conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  
-    conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_BUFFER_SIZE)  # Send buffer
-    conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_BUFFER_SIZE)  # Receive buffer
+    conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_BUFFER_SIZE)
+    conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_BUFFER_SIZE)
     
     conn.send("OK@Welcome to the server. Please log in".encode(FORMAT))
 
@@ -55,7 +80,7 @@ def handle_client(conn: socket.socket, addr):
         conn.close()
         return
 
-   
+    # Main command loop
     while True:
         try:
             data = conn.recv(SIZE).decode(FORMAT).strip()
@@ -65,7 +90,58 @@ def handle_client(conn: socket.socket, addr):
             parts = data.split("@")
             cmd = parts[0].upper()
 
-            if cmd == "LOGOUT":
+            # PING command - for latency testing
+            if cmd == "PING":
+                conn.send("PONG".encode(FORMAT))
+                
+            # THROUGHPUT command - for throughput testing
+            elif cmd == "THROUGHPUT":
+                if len(parts) < 3:
+                    conn.send("ERR@Invalid THROUGHPUT format".encode(FORMAT))
+                    continue
+                
+                try:
+                    size_kb = int(parts[1])
+                    iterations = int(parts[2])
+                    total_bytes = size_kb * iterations * 1024
+                    
+                    print(f"[THROUGHPUT] Starting test: {size_kb}KB x {iterations} iterations = {total_bytes/1_048_576:.2f}MB from {addr}")
+                    
+                    # Signal ready to receive
+                    conn.send("READY".encode(FORMAT))
+                    
+                    received_total = 0
+                    start_time = time.time()
+                    
+                    for batch in range(1, iterations + 1):
+                        batch_received = 0
+                        
+                        # Receive size_kb chunks (each 1KB)
+                        for chunk_num in range(size_kb):
+                            try:
+                                chunk_data = recv_length_prefixed(conn)
+                                batch_received += len(chunk_data)
+                                received_total += len(chunk_data)
+                            except Exception as e:
+                                print(f"[THROUGHPUT ERROR] Batch {batch}, chunk {chunk_num}: {e}")
+                                raise
+                        
+                        # Send ACK for this batch
+                        conn.send(f"ACK_BATCH_{batch}".encode(FORMAT))
+                    
+                    duration = time.time() - start_time
+                    mbps = (received_total / 1_048_576) / duration if duration > 0 else 0
+                    
+                    print(f"[THROUGHPUT] Complete: {received_total:,} bytes ({received_total/1_048_576:.2f}MB) "
+                          f"in {duration:.2f}s = {mbps:.2f} MB/s")
+                    
+                except ValueError as e:
+                    conn.send(f"ERR@Invalid parameters: {e}".encode(FORMAT))
+                except Exception as e:
+                    print(f"[THROUGHPUT ERROR] {addr}: {e}")
+                    conn.send(f"ERR@Throughput test failed: {e}".encode(FORMAT))
+
+            elif cmd == "LOGOUT":
                 conn.send("OK@Disconnected from the server.".encode(FORMAT))
                 break
 
@@ -98,7 +174,7 @@ def handle_client(conn: socket.socket, addr):
                 # Receive file size
                 size_str = conn.recv(SIZE).decode(FORMAT).strip()
                 filesize = int(size_str)
-                conn.send("OK".encode(FORMAT))          # confirm
+                conn.send("OK".encode(FORMAT))
 
                 print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
 
@@ -115,7 +191,6 @@ def handle_client(conn: socket.socket, addr):
                 print(f"[SAVED] '{filename}' uploaded successfully.")
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
 
-            # download
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -128,10 +203,8 @@ def handle_client(conn: socket.socket, addr):
                     continue
 
                 filesize = os.path.getsize(filepath)
-                # Send file size to client
                 conn.send(f"OK@{filesize}".encode(FORMAT))
                 
-                # Wait for client acknowledgment
                 ack = conn.recv(SIZE).decode(FORMAT).strip()
                 if ack != "READY":
                     print(f"[ERROR] Client not ready for download")
@@ -149,13 +222,11 @@ def handle_client(conn: socket.socket, addr):
                         if not chunk:
                             break
                         
-                        # Send entire chunk
                         conn.sendall(chunk)
                         sent += len(chunk)
 
                 print(f"[SENT] '{filename}' sent successfully to {addr} ({sent} bytes)")
                 
-            #Delete
             elif cmd == "DELETE":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
@@ -170,7 +241,6 @@ def handle_client(conn: socket.socket, addr):
                 else:
                     conn.send("ERR@File not found.".encode(FORMAT))
 
-            #Error handling
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))
 

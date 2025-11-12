@@ -4,33 +4,28 @@ import time
 import struct
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
-SERVER_HOST = "172.20.10.7"
+SERVER_HOST = "172.20.10.2"
 SERVER_PORT = 4450
 FORMAT = "utf-8"
 SIZE = 1024
 
-
+# ------------------------------------------------------------------
+# Length-prefixed helpers (used for PING, THROUGHPUT, LOGOUT)
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Simple send/recv helpers (raw, not length-prefixed)
+# ------------------------------------------------------------------
 def _send_msg(conn: socket.socket, msg: str):
-    payload = msg.encode(FORMAT)
-    conn.sendall(struct.pack("!I", len(payload)) + payload)
+    conn.sendall(msg.encode(FORMAT))
 
 def _recv_msg(conn: socket.socket) -> str:
-    # Use the socket's existing timeout
-    header = b""
-    while len(header) < 4:
-        chunk = conn.recv(4 - len(header))
-        if not chunk:
-            raise ConnectionError("Socket closed during header")
-        header += chunk
-    msg_len = struct.unpack("!I", header)[0]
-    data = b""
-    while len(data) < msg_len:
-        chunk = conn.recv(msg_len - len(data))
-        if not chunk:
-            raise ConnectionError("Socket closed during payload")
-        data += chunk
-    return data.decode(FORMAT)
+    data = conn.recv(SIZE)
+    if not data:
+        raise ConnectionError("Socket closed during recv")
+    return data.decode(FORMAT).strip()
+
 
 
 def measure_latency(conn, num_pings: int = 50):
@@ -87,7 +82,7 @@ def calculate_packet_loss(latencies):
 
 def main():
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    conn.settimeout(12.0)
+    conn.settimeout(20.0)
 
     # CONNECT
     try:
@@ -105,17 +100,15 @@ def main():
     except Exception as e:
         print(f"[WARNING] No welcome: {e}")
 
-    try:
-        conn.sendall("LOGIN@perf_test@perf_test".encode(FORMAT))
-        login_resp = conn.recv(SIZE).decode(FORMAT).strip()
-        print(f"[LOGIN RESPONSE] {login_resp}")
-        if not login_resp.startswith("OK@AUTH_SUCCESS"):
-            print(f"[ERROR] Login failed: {login_resp}")
-            conn.close()
-            return
-        print("[LOGIN] SUCCESS!\n")
-    except Exception as e:
-        print(f"[LOGIN ERROR] {e}")
+    # LOGIN (raw send + raw recv)
+    username = 'Dennis'
+    password = 'password'
+    conn.send(f"LOGIN@{username}@{password}".encode(FORMAT))
+
+    login_resp = conn.recv(SIZE).decode(FORMAT)
+    parts = login_resp.split("@")
+    if len(parts) < 2 or parts[0] != "OK" or parts[1] != "AUTH_SUCCESS":
+       
         conn.close()
         return
 
@@ -151,7 +144,29 @@ def main():
     print(f"Throughput      : {throughput:6.2f} MB/s")
     print(f"Packet Loss     : {packet_loss:6.1f} %")
     print(f"Successful pings: {len(valid)} / {len(latencies)}")
+    print("Timestamp",time.strftime("%Y-%m-%d %H:%M:%S"))
     print("="*60)
+    
+
+    results = {
+        "Average_Latency_ms": avg_latency,
+        "Throughput_MBps": throughput,
+        "Packet_Loss_percent": packet_loss,
+        "Successful_Pings": len(valid),
+        "Total_Pings": len(latencies),
+        "Timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    
+    latency_df = pd.DataFrame({
+        "Ping_Number": list(range(1, len(latencies)+1)),
+        "Latency_ms": [l if l is not None else None for l in latencies],
+    })
+
+    # Combine into one report file
+    summary_df = pd.DataFrame([results])
+    summary_df.to_csv("network_summary.csv", mode="a", index=False)
+    latency_df.to_csv("latency_details.csv", index=False)
 
     # Table
     if valid:

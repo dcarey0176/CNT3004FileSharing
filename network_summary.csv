@@ -1,0 +1,4 @@
+Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pings,Timestamp
+inf,0.0,100.0,0,50,2025-11-12 14:04:55
+Average_Latency_ms,Throughput_MBps,Packet_Loss_percent,Successful_Pings,Total_Pings,Timestamp
+0.1174539998464752,7.686396971325437,0.0,50,50,2025-11-12 14:05:37
