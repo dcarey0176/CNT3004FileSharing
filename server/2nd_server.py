@@ -255,17 +255,28 @@ def handle_client(conn: socket.socket, addr):
                 
             elif cmd == "DELETE":
                 if len(parts) < 2:
-                    conn.send("ERR@Missing filename".encode(FORMAT))
+                    conn.send("ERR@Missing filename or folder name".encode(FORMAT))
                     continue
-                filename = parts[1]
-                filepath = os.path.join(SERVER_PATH, filename)
 
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                    conn.send(f"OK@File '{filename}' deleted successfully.".encode(FORMAT))
-                    print(f"[DELETE] '{filename}' removed by {addr}")
-                else:
-                    conn.send("ERR@File not found.".encode(FORMAT))
+                path_to_delete = os.path.join(SERVER_PATH, parts[1])
+
+                if not os.path.exists(path_to_delete):
+                    conn.send("ERR@Path not found.".encode(FORMAT))
+                    continue
+
+                try:
+                    if os.path.isfile(path_to_delete):
+                        os.remove(path_to_delete)
+                        conn.send(f"OK@File '{parts[1]}' deleted successfully.".encode(FORMAT))
+                        print(f"[DELETE] File '{parts[1]}' removed by {addr}")
+                    elif os.path.isdir(path_to_delete):
+                        import shutil
+                        shutil.rmtree(path_to_delete)
+                        conn.send(f"OK@Folder '{parts[1]}' deleted successfully.".encode(FORMAT))
+                        print(f"[DELETE] Folder '{parts[1]}' removed by {addr}")
+                except Exception as e:
+                    conn.send(f"ERR@Failed to delete '{parts[1]}': {e}".encode(FORMAT))
+                    print(f"[ERROR][DELETE] {addr}: Failed to delete '{parts[1]}': {e}")
 
             else:
                 conn.send("ERR@Unknown command".encode(FORMAT))

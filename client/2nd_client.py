@@ -22,19 +22,19 @@ def receive_response(conn: socket.socket):
 def handle_upload(conn: socket.socket, path: str, sub: str = None):
     """Upload a file or folder to the server."""
     if not os.path.exists(path):
-        type_effect.type_print("⚠️ File or folder does not exist.")
+        type_effect.type_print("File or folder does not exist.")
         return
 
     if os.path.isdir(path):
-        # Check if folder is empty
+        # If folder is empty
         if not any(os.scandir(path)):
-            # Send empty folder command
             folder_name = os.path.basename(path) if not sub else sub
             conn.send(f"UPLOAD_EMPTY@{folder_name}".encode(FORMAT))
-            type_effect.type_print(f"✅ Empty folder '{folder_name}' created on server.")
+            response = receive_response(conn)
+            type_effect.type_print(f"{response}")
             return
 
-        # Upload non-empty folder
+        # Non-empty folder
         for root, _, files in os.walk(path):
             rel_path = os.path.relpath(root, path)
             if rel_path == ".":
@@ -43,19 +43,21 @@ def handle_upload(conn: socket.socket, path: str, sub: str = None):
                 file_path = os.path.join(root, file)
                 sub_folder = os.path.join(sub or os.path.basename(path), rel_path)
                 upload_single_file(conn, file_path, sub_folder)
-        type_effect.type_print("✅ Folder uploaded successfully.")
+        type_effect.type_print("Folder uploaded successfully.")
     else:
         upload_single_file(conn, path, sub)
 
 
+
 def upload_single_file(conn: socket.socket, filename: str, sub: str = None):
-    """Send a single file to the server."""
+    """Upload a single file to the server."""
     base_name = os.path.basename(filename)
     if sub:
         conn.send(f"UPLOAD@{base_name}@{sub}".encode(FORMAT))
     else:
         conn.send(f"UPLOAD@{base_name}".encode(FORMAT))
 
+    # Wait for server READY
     if receive_response(conn) != "READY":
         type_effect.type_print("Server not ready for upload.")
         return
@@ -67,11 +69,13 @@ def upload_single_file(conn: socket.socket, filename: str, sub: str = None):
         type_effect.type_print("Server rejected file size.")
         return
 
+    # Send file in chunks
     with open(filename, "rb") as f:
         while chunk := f.read(CHUNK_SIZE):
             conn.sendall(chunk)
 
     type_effect.type_print(receive_response(conn))
+
 
 #Download
 def handle_download(conn: socket.socket, filename: str):
