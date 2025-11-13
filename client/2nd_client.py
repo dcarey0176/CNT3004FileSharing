@@ -26,19 +26,27 @@ def handle_upload(conn: socket.socket, path: str, sub: str = None):
         return
 
     if os.path.isdir(path):
-        # Upload folder
+        # Check if folder is empty
+        if not any(os.scandir(path)):
+            # Send empty folder command
+            folder_name = os.path.basename(path) if not sub else sub
+            conn.send(f"UPLOAD_EMPTY@{folder_name}".encode(FORMAT))
+            type_effect.type_print(f"✅ Empty folder '{folder_name}' created on server.")
+            return
+
+        # Upload non-empty folder
         for root, _, files in os.walk(path):
             rel_path = os.path.relpath(root, path)
             if rel_path == ".":
                 rel_path = ""
             for file in files:
                 file_path = os.path.join(root, file)
-                # Build subfolder path on the server
                 sub_folder = os.path.join(sub or os.path.basename(path), rel_path)
                 upload_single_file(conn, file_path, sub_folder)
         type_effect.type_print("✅ Folder uploaded successfully.")
     else:
         upload_single_file(conn, path, sub)
+
 
 def upload_single_file(conn: socket.socket, filename: str, sub: str = None):
     """Send a single file to the server."""

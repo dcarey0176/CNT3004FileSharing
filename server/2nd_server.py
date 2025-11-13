@@ -210,6 +210,13 @@ def handle_client(conn: socket.socket, addr):
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
                 print(f"[UPLOAD] {addr} uploaded '{filename}' ({received} bytes) to '{sub or '.'}'")
 
+            elif cmd == "UPLOAD_EMPTY":
+                folder_name = parts[1]
+                folder_path = os.path.join(SERVER_PATH, folder_name)
+                os.makedirs(folder_path, exist_ok=True)
+                conn.send(f"OK@Empty folder '{folder_name}' created successfully.".encode(FORMAT))
+                print(f"[UPLOAD_EMPTY] {addr} created empty folder '{folder_name}'")
+
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
