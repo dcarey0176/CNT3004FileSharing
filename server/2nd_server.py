@@ -167,9 +167,6 @@ def handle_client(conn: socket.socket, addr):
                     conn.send(f"Files on server:\n{formatted_list}".encode(FORMAT))
 
             elif cmd == "UPLOAD":
-                # Expected formats:
-                #   UPLOAD@filename
-                #   UPLOAD@filename@subfolder
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
                     continue
@@ -177,18 +174,13 @@ def handle_client(conn: socket.socket, addr):
                 filename = parts[1]
                 sub = parts[2] if len(parts) >= 3 else None
 
-                # Determine destination folder
-                if sub:
-                    subpath = os.path.join(SERVER_PATH, sub)
-                else:
-                    subpath = SERVER_PATH
-
-                # Make sure directory exists
+                # Build correct destination path
+                subpath = os.path.join(SERVER_PATH, sub) if sub else SERVER_PATH
                 os.makedirs(subpath, exist_ok=True)
 
                 filepath = os.path.join(subpath, filename)
 
-                # Tell client we’re ready
+                # Tell client we're ready
                 conn.send("READY".encode(FORMAT))
 
                 # Receive file size
@@ -201,7 +193,7 @@ def handle_client(conn: socket.socket, addr):
 
                 conn.send("OK".encode(FORMAT))
 
-                # Receive file contents
+                # Receive file data
                 received = 0
                 with open(filepath, "wb") as f:
                     while received < filesize:

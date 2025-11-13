@@ -19,21 +19,35 @@ def receive_response(conn: socket.socket):
 
 
 #upload
-def handle_upload(conn: socket.socket, filename: str, sub: str = None):
-    if not os.path.exists(filename):
-        type_effect.type_print("File does not exist.")
+def handle_upload(conn: socket.socket, path: str, sub: str = None):
+    """Upload a file or folder to the server."""
+    if not os.path.exists(path):
+        type_effect.type_print("⚠️ File or folder does not exist.")
         return
 
-    # Extract just the file’s base name (no local path)
-    base_name = os.path.basename(filename)
+    if os.path.isdir(path):
+        # Upload folder
+        for root, _, files in os.walk(path):
+            rel_path = os.path.relpath(root, path)
+            if rel_path == ".":
+                rel_path = ""
+            for file in files:
+                file_path = os.path.join(root, file)
+                # Build subfolder path on the server
+                sub_folder = os.path.join(sub or os.path.basename(path), rel_path)
+                upload_single_file(conn, file_path, sub_folder)
+        type_effect.type_print("✅ Folder uploaded successfully.")
+    else:
+        upload_single_file(conn, path, sub)
 
-    # Send upload command with optional subfolder
+def upload_single_file(conn: socket.socket, filename: str, sub: str = None):
+    """Send a single file to the server."""
+    base_name = os.path.basename(filename)
     if sub:
         conn.send(f"UPLOAD@{base_name}@{sub}".encode(FORMAT))
     else:
         conn.send(f"UPLOAD@{base_name}".encode(FORMAT))
 
-    # Wait for server to confirm readiness
     if receive_response(conn) != "READY":
         type_effect.type_print("Server not ready for upload.")
         return
@@ -45,16 +59,11 @@ def handle_upload(conn: socket.socket, filename: str, sub: str = None):
         type_effect.type_print("Server rejected file size.")
         return
 
-    # Send file in chunks
     with open(filename, "rb") as f:
         while chunk := f.read(CHUNK_SIZE):
             conn.sendall(chunk)
 
-    # Final server response (e.g., upload complete)
     type_effect.type_print(receive_response(conn))
-
-
-
 
 #Download
 def handle_download(conn: socket.socket, filename: str):
