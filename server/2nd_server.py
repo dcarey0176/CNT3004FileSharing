@@ -15,9 +15,13 @@ SIZE = 1024
 CHUNK_SIZE = 65536  # 64KB chunks 
 SOCKET_BUFFER_SIZE = 65536  
 FORMAT = "utf-8"
-SERVER_PATH = "server_data"          
+SERVER_PATH = "server\server_data"          
 
 
+
+# ----------------------------------------------------------------
+# Helper functions for length-prefixed messages (for THROUGHPUT)
+# ----------------------------------------------------------------
 def recv_length_prefixed(conn: socket.socket) -> bytes:
     """Receive length-prefixed data (4-byte length header + data)"""
     # Receive 4-byte length header
@@ -137,12 +141,12 @@ def handle_client(conn: socket.socket, addr):
                     conn.send(f"ERR@Throughput test failed: {e}".encode(FORMAT))
 
             elif cmd == "LOGOUT":
-                conn.send("Disconnected from the server.".encode(FORMAT))
+                conn.send("OK@Disconnected from the server.".encode(FORMAT))
                 break
 
             elif cmd == "HELP":
                 msg = (
-                    "Available commands:\n"
+                    "OK@Available commands:\n"
                     "UPLOAD <filename>\nDOWNLOAD <filename>\n"
                     "DELETE <filename>\nDIR\nLOGOUT"
                 )
@@ -151,61 +155,41 @@ def handle_client(conn: socket.socket, addr):
             elif cmd == "DIR":
                 files = os.listdir(SERVER_PATH)
                 if not files:
-                    conn.send("No files found.".encode(FORMAT))
+                    conn.send("OK@No files found.".encode(FORMAT))
                 else:
                     file_list = "\n".join(files)
-                    conn.send(f"Files on server:\n{file_list}".encode(FORMAT))
+                    conn.send(f"OK@Files on server:\n{file_list}".encode(FORMAT))
 
             elif cmd == "UPLOAD":
-                # Expected formats:
-                #   UPLOAD@filename
-                #   UPLOAD@filename@subfolder
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
                     continue
-
                 filename = parts[1]
-                sub = parts[2] if len(parts) >= 3 else None
+                filepath = os.path.join(SERVER_PATH, filename)
 
-                # Determine destination folder
-                if sub:
-                    subpath = os.path.join(SERVER_PATH, sub)
-                else:
-                    subpath = SERVER_PATH
-
-                # Make sure directory exists
-                os.makedirs(subpath, exist_ok=True)
-
-                filepath = os.path.join(subpath, filename)
-
-                # Tell client we’re ready
+                # Tell client we are ready
                 conn.send("READY".encode(FORMAT))
 
                 # Receive file size
-                filesize_data = conn.recv(SIZE).decode(FORMAT)
-                try:
-                    filesize = int(filesize_data)
-                except ValueError:
-                    conn.send("ERR@Invalid file size".encode(FORMAT))
-                    continue
-
+                size_str = conn.recv(SIZE).decode(FORMAT).strip()
+                filesize = int(size_str)
                 conn.send("OK".encode(FORMAT))
 
-                # Receive file contents
+                print(f"[RECV] Receiving '{filename}' ({filesize} bytes) from {addr}")
+
                 received = 0
                 with open(filepath, "wb") as f:
                     while received < filesize:
-                        chunk = conn.recv(min(CHUNK_SIZE, filesize - received))
+                        chunk_size = min(CHUNK_SIZE, filesize - received)
+                        chunk = conn.recv(chunk_size)
                         if not chunk:
-                            break
+                            raise ConnectionError("Client disconnected mid-upload")
                         f.write(chunk)
                         received += len(chunk)
 
+                print(f"[SAVED] '{filename}' uploaded successfully.")
                 conn.send(f"OK@File '{filename}' uploaded successfully.".encode(FORMAT))
-                print(f"[UPLOAD] {addr} uploaded '{filename}' ({received} bytes) to '{sub or '.'}'")
 
-
-                
             elif cmd == "DOWNLOAD":
                 if len(parts) < 2:
                     conn.send("ERR@Missing filename".encode(FORMAT))
