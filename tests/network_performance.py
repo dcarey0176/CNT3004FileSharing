@@ -21,8 +21,6 @@ def _recv_msg(conn: socket.socket) -> str:
         raise ConnectionError("Socket closed during recv")
     return data.decode(FORMAT).strip()
 
-
-
 def measure_latency(conn, num_pings: int = 50):
     latencies = []
     for i in range(1, num_pings + 1):

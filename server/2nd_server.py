@@ -142,7 +142,7 @@ def handle_client(conn: socket.socket, addr):
 
             elif cmd == "HELP":
                 msg = (
-                    "OK@Available commands:\n"
+                    "Available commands:\n"
                     "UPLOAD <filename>\nDOWNLOAD <filename>\n"
                     "DELETE <filename>\nDIR\nLOGOUT"
                 )
