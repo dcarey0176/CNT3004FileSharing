@@ -155,10 +155,14 @@ def handle_client(conn: socket.socket, addr):
                 else:
                     file_list = []
                     for file in files:
-                        file_type = os.path.splitext(file)[1]  # Gets the file extension
-                        if file_type == "":
-                            file_type = "(no extension)"
-                        file_list.append(f"{file} — {file_type}")
+                        filepath = os.path.join(SERVER_PATH, file)
+                        if os.path.isdir(filepath):
+                            file_list.append(f"{file}/ — [DIR]")
+                        else:
+                            name, extension = os.path.splitext(file)
+                            if extension == "":
+                                extension = "(unknown type)"
+                            file_list.append(f"{name} — {extension}")
                     formatted_list = "\n".join(file_list)
                     conn.send(f"Files on server:\n{formatted_list}".encode(FORMAT))
 
