@@ -153,8 +153,14 @@ def handle_client(conn: socket.socket, addr):
                 if not files:
                     conn.send("No files found.".encode(FORMAT))
                 else:
-                    file_list = "\n".join(files)
-                    conn.send(f"Files on server:\n{file_list}".encode(FORMAT))
+                    file_list = []
+                    for file in files:
+                        file_type = os.path.splitext(file)[1]  # Gets the file extension
+                        if file_type == "":
+                            file_type = "(no extension)"
+                        file_list.append(f"{file} — {file_type}")
+                    formatted_list = "\n".join(file_list)
+                    conn.send(f"Files on server:\n{formatted_list}".encode(FORMAT))
 
             elif cmd == "UPLOAD":
                 # Expected formats:
