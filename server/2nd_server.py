@@ -137,7 +137,7 @@ def handle_client(conn: socket.socket, addr):
                     conn.send(f"ERR@Throughput test failed: {e}".encode(FORMAT))
 
             elif cmd == "LOGOUT":
-                conn.send("OK@Disconnected from the server.".encode(FORMAT))
+                conn.send("Disconnected from the server.".encode(FORMAT))
                 break
 
             elif cmd == "HELP":
