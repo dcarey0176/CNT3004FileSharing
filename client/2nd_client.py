@@ -3,7 +3,7 @@ import socket
 import sys
 import type_effect
 
-IP = "25.40.106.181"
+IP = "172.20.10.6"
 PORT = 4450
 ADDR = (IP, PORT)
 SIZE = 1024
