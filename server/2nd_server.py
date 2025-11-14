@@ -19,9 +19,7 @@ SERVER_PATH = "server\server_data"
 
 
 
-# ----------------------------------------------------------------
-# Helper functions for length-prefixed messages (for THROUGHPUT)
-# ----------------------------------------------------------------
+
 def recv_length_prefixed(conn: socket.socket) -> bytes:
     """Receive length-prefixed data (4-byte length header + data)"""
     # Receive 4-byte length header
