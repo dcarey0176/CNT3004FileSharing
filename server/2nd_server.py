@@ -21,7 +21,6 @@ SERVER_PATH = "server\server_data"
 
 
 def recv_length_prefixed(conn: socket.socket) -> bytes:
-    """Receive length-prefixed data (4-byte length header + data)"""
     # Receive 4-byte length header
     length_data = b""
     while len(length_data) < 4:
